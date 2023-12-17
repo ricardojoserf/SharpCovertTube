@@ -41,7 +41,7 @@ def generate_frames(image_type, imagesFolder):
 
 def create_file(video_file, imagesFolder):
 	img_array = []
-	natsort = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)]
+	natsort = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]
 	for filename in sorted(glob(imagesFolder + '*.png'), key=natsort):
 		img = cv2.imread(filename)
 		height, width, layers = img.shape
