@@ -2,24 +2,19 @@
 
 A program to control Windows systems remotely by uploading videos to Youtube, using C# for the listener and Python to create the videos. The QR codes can be in cleartext or AES-encrypted values.
 
+![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_0.png)
 
 ## Usage
 
 Run the listener in your Windows system:
 
-```
-SharpCovertTube.exe
-```
-
-The listener will check the Youtube channel every 120 seconds (by default) until a new video is uploaded. In this case we upload "whoami.avi" from the folder [example-videos](https://github.com/ricardojoserf/SharpCovertTube/tree/main/example-videos):
-
 ![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_1.png)
 
-After finding there is a [new video](https://www.youtube.com/shorts/-JcDf4pF0qA) in the channel, it gets the QR code from the video thumbnail:
+It will check the Youtube channel every 120 seconds (by default) until a new video is uploaded. In this case, we upload "whoami.avi" from the folder [example-videos](https://github.com/ricardojoserf/SharpCovertTube/tree/main/example-videos):
 
-![img2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_2.png)
+<img src="https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_2.png" width=45%>
 
-The QR is decoded, the command is executed and the response is base64-encoded and exfiltrated using DNS:
+After finding there is a [new video](https://www.youtube.com/shorts/-JcDf4pF0qA) in the channel, it decodes the QR code from the video thumbnail, executes the command and the response is base64-encoded and exfiltrated using DNS:
 
 ![img3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_3.png)
 
