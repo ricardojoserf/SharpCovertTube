@@ -95,6 +95,7 @@ static public class QRCodeTrace
 			string Message
 			)
 		{
+		Console.WriteLine("Message: \t" + Message);
 		// test file length
 		TestSize();
 
@@ -125,11 +126,11 @@ static public class QRCodeTrace
 		// get trace file info
 		FileInfo TraceFileInfo = new FileInfo(TraceFileName);
 
-		// if file does not exist or file length less than max allowed file size do nothing
-		if(TraceFileInfo.Exists == false || TraceFileInfo.Length <= MaxAllowedFileSize) return;
+        // if file does not exist or file length less than max allowed file size do nothing
+        if (TraceFileInfo.Exists == false || TraceFileInfo.Length <= MaxAllowedFileSize) return;
 
-		// create file info class
-		FileStream TraceFile = new FileStream(TraceFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        // create file info class
+        FileStream TraceFile = new FileStream(TraceFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
 		// seek to 25% length
 		TraceFile.Seek(TraceFile.Length / 4, SeekOrigin.Begin);
@@ -137,8 +138,8 @@ static public class QRCodeTrace
 		// new file length
 		int NewFileLength = (int) (TraceFile.Length - TraceFile.Position);
 
-		// new file buffer
-		byte[] Buffer = new byte[NewFileLength];
+        // new file buffer
+        byte[] Buffer = new byte[NewFileLength];
 
 		// read file to the end
 		TraceFile.Read(Buffer, 0, NewFileLength);

