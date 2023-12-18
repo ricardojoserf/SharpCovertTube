@@ -1,6 +1,6 @@
 # SharpCovertTube
 
-A program to control Windows systems remotely by uploading videos to Youtube, using C# for the listener and Python to create the videos. QR codes can be in cleartext or AES-encrypted values.
+A program to control Windows systems remotely by uploading videos to Youtube, using C# for the listener and Python to create the videos. The QR codes can be in cleartext or AES-encrypted values.
 
 
 ## Usage
@@ -11,17 +11,21 @@ Run the listener in your Windows system:
 SharpCovertTube.exe
 ```
 
-The listener will check the Youtube channel every 300 seconds by default (this can be updated in Program.cs) until a new video is uploaded. In this case we upload "whoami.avi" from the folder example-videos:
+The listener will check the Youtube channel every 120 seconds (by default) until a new video is uploaded. In this case we upload "whoami.avi" from the folder [example-videos](https://github.com/ricardojoserf/SharpCovertTube/tree/main/example-videos):
 
-![img2]()
+![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_1.png)
 
-After finding there is a new video in the channel, it gets the QR code from the video thumbnail and the command is executed:
+After finding there is a [new video](https://www.youtube.com/shorts/-JcDf4pF0qA) in the channel, it gets the QR code from the video thumbnail:
 
-![img3]()
+![img2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_2.png)
 
-The response is base64-encoded and exfiltrated using DNS:
+The QR is decoded, the command is executed and the response is base64-encoded and exfiltrated using DNS:
 
-![img4]()
+![img3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_3.png)
+
+This works also for QR codes with AES-encrypted payloads and longer command responses. In this example, the file "dirtemp_aes.avi" from [example-videos](https://github.com/ricardojoserf/SharpCovertTube/tree/main/example-videos) is uploaded and the content of c:\temp is exfiltrated using several DNS queries:
+
+![img4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_4.png)
 
 -------------------
 
@@ -29,9 +33,9 @@ The response is base64-encoded and exfiltrated using DNS:
 
 - **channel_id** (Mandatory!!!): Get your Youtube channel ID from [here](https://www.youtube.com/account_advanced).
 - **api_key** (Mandatory!!!): To get the API key create an application and generate the key from [here](https://console.cloud.google.com/apis/credentials).
-- **payload_aes_key** (Optional. Default: "0000000000000000"): AES key for decrypting QR codes (if using AES)
-- **payload_aes_iv** (Optional. Default: "0000000000000000"): IV key for decrypting QR codes (if using AES)
-- **seconds_delay** (Optional. Default: 300): Seconds delay until checking if a new video has been uploaded.
+- **payload_aes_key** (Optional. Default: "0000000000000000"): AES key for decrypting QR codes (if using AES). It must be a 16-characters string.
+- **payload_aes_iv** (Optional. Default: "0000000000000000"): IV key for decrypting QR codes (if using AES). It must be a 16-characters string.
+- **seconds_delay** (Optional. Default: 120): Seconds delay until checking if a new video has been uploaded.
 - **dns_hostname** (Optional. Default: ".test.org"): DNS hostname to exfiltrate the response from commands executed in the system.
 
 ----------------------------------
@@ -76,5 +80,14 @@ python generate_video.py -t qr_aes -f c:\temp\dirtemp_aes.avi -c "dir c:\windows
 ```
 <br>
 
-![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_1.png)
+![img5](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_5.png)
 
+
+---------------------------
+
+
+## Notes
+
+- File must be 64 bits. This is due to the code used for QR decoding, which is from [Stefangansevles](https://github.com/Stefangansevles)'s project [QR-Capture](https://github.com/Stefangansevles/QR-Capture)
+
+- This project is a port from [covert-tube](https://github.com/ricardojoserf/covert-tube), a project I developed in 2021 using just Python, which was inspired by Welivesecurity blogs about [Casbaneiro](https://www.welivesecurity.com/2019/10/03/casbaneiro-trojan-dangerous-cooking/) and [Numando](https://www.welivesecurity.com/2021/09/17/numando-latam-banking-trojan/) malwares.
