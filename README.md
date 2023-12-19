@@ -10,7 +10,7 @@ Run the listener in your Windows system:
 
 ![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_1.png)
 
-It will check the Youtube channel every 120 seconds (by default) until a new video is uploaded. In this case, we upload "whoami.avi" from the folder [example-videos](https://github.com/ricardojoserf/SharpCovertTube/tree/main/example-videos):
+It will check the Youtube channel every a specific amount of time (10 minutes by default) until a new video is uploaded. In this case, we upload "whoami.avi" from the folder [example-videos](https://github.com/ricardojoserf/SharpCovertTube/tree/main/example-videos):
 
 <img src="https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_2.png" width=45%>
 
