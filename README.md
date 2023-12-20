@@ -85,11 +85,29 @@ python generate_video.py -t qr_aes -f c:\temp\dirtemp_aes.avi -c "dir c:\windows
 ![img5](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_5.png)
 
 
+
 ---------------------------
 
+## Running it as a service
+
+It is also possible to run it as a service with the code in the [SharpCovertTube_Service folder](https://github.com/ricardojoserf/SharpCovertTube/tree/main/SharpCovertTube_Service). It possible to install it with InstallUtil, it is prepared to run as SYSTEM so you need to run it as administrator:
+
+```
+InstallUtil.exe SharpCovertTube_Service.exe
+```
+
+You can then start it with:
+
+```
+net start "SharpCovertTube Service"
+```
+
+![img7](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_7.png)
+
+---------------------------
 
 ## Notes
 
-- File must be 64 bits. This is due to the code used for QR decoding, which is from [Stefangansevles](https://github.com/Stefangansevles)'s project [QR-Capture](https://github.com/Stefangansevles/QR-Capture)
+- File must be 64 bits!!!. This is due to the code used for QR decoding, which is from [Stefangansevles](https://github.com/Stefangansevles)'s project [QR-Capture](https://github.com/Stefangansevles/QR-Capture)
 
 - This project is a port from [covert-tube](https://github.com/ricardojoserf/covert-tube), a project I developed in 2021 using just Python, which was inspired by Welivesecurity blogs about [Casbaneiro](https://www.welivesecurity.com/2019/10/03/casbaneiro-trojan-dangerous-cooking/) and [Numando](https://www.welivesecurity.com/2021/09/17/numando-latam-banking-trojan/) malwares.
