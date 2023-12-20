@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ProjectInstaller));
             this.serviceProcessInstaller1 = new System.ServiceProcess.ServiceProcessInstaller();
             this.serviceInstaller1 = new System.ServiceProcess.ServiceInstaller();
             // 
@@ -40,8 +39,9 @@
             // 
             // serviceInstaller1
             // 
-            this.serviceInstaller1.Description = resources.GetString("serviceInstaller1.Description");
-            this.serviceInstaller1.DisplayName = "Network Location Awareness 2";
+            this.serviceInstaller1.Description = "You can change Description and DisplayName from serviceInstaller1 properties to u" +
+    "se more stealthy values :)";
+            this.serviceInstaller1.DisplayName = "SharpCovertTube Service";
             this.serviceInstaller1.ServiceName = "SharpCovertTube_Service";
             this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 

