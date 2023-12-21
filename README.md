@@ -39,7 +39,7 @@ There are some values you can change, you can find them in line 17 of [Program.c
 - **seconds_delay** (Optional. Default: 600): Seconds delay until checking if a new video has been uploaded.
 - **debug_console** (Optional. Default: true): Show debug messages in console or not.
 - **log_to_file** (Optional. Default: true): Write debug messages in log file or not.
-- **log_file** (Optional. Default: "c:\temp\.sharpcoverttube.log"): Log file path.
+- **log_file** (Optional. Default: "c:\temp\\.sharpcoverttube.log"): Log file path.
 - **dns_exfiltration** (Optional. Default: true): Exfiltrate command responses through DNS or not.
 - **dns_hostname** (Optional. Default: ".test.org"): DNS hostname to exfiltrate the response from commands executed in the system.
 
