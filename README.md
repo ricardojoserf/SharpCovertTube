@@ -22,6 +22,10 @@ This works also for QR codes with AES-encrypted payloads and longer command resp
 
 ![img4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_4.png)
 
+Logging to a file is optional but you must check the folder for that file exists in the system, the default value is "c:\temp\\.sharpcoverttube.log". DNS exfiltration is also optional and can be tested using Burp's collaborator:
+
+![img8](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_8.png)
+
 -------------------
 
 ## Configuration
@@ -35,7 +39,7 @@ There are some values you can change, you can find them in line 17 of [Program.c
 - **seconds_delay** (Optional. Default: 600): Seconds delay until checking if a new video has been uploaded.
 - **debug_console** (Optional. Default: true): Show debug messages in console or not.
 - **log_to_file** (Optional. Default: true): Write debug messages in log file or not.
-- **log_file** (Optional. Default: true): Log file.
+- **log_file** (Optional. Default: "c:\temp\.sharpcoverttube.log"): Log file path.
 - **dns_exfiltration** (Optional. Default: true): Exfiltrate command responses through DNS or not.
 - **dns_hostname** (Optional. Default: ".test.org"): DNS hostname to exfiltrate the response from commands executed in the system.
 
