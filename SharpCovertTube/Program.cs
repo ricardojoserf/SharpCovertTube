@@ -10,6 +10,7 @@ using SharpCovertTube.QRCodeDecoder;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 
+
 namespace SharpCovertTube
 {
     internal class Program
