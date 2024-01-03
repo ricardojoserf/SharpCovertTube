@@ -26,6 +26,8 @@ Logging to a file is optional but you must check the folder for that file exists
 
 ![img8](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_8.png)
 
+As an alternative, I created [this repository](https://github.com/ricardojoserf/dns-exfiltration) with scripts to monitor and parse the base64-encoded DNS queries containing the command responses.
+
 -------------------
 
 ## Configuration
