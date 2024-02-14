@@ -32,13 +32,13 @@ As an alternative, I created [this repository](https://github.com/ricardojoserf/
 
 ## Configuration
 
-There are some values you can change, you can find them in line 17 of [Program.cs file](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube/Program.cs) for the regular binary and in [SharpCovertTube.cs file](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube_Service/SharpCovertTube.cs) for the service binary. Only the first two ones need to be updated:
+There are some values you can change, you can find them in Configuration.cs file for the [regular binary](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube/Configuration.cs) and [the service binary](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube_Service/Configuration.cs). Only the first two have to be updated:
 
 - **channel_id** (Mandatory!!!): Get your Youtube channel ID from [here](https://www.youtube.com/account_advanced).
 - **api_key** (Mandatory!!!): To get the API key create an application and generate the key from [here](https://console.cloud.google.com/apis/credentials).
 - **payload_aes_key** (Optional. Default: "0000000000000000"): AES key for decrypting QR codes (if using AES). It must be a 16-characters string.
 - **payload_aes_iv** (Optional. Default: "0000000000000000"): IV key for decrypting QR codes (if using AES). It must be a 16-characters string.
-- **seconds_delay** (Optional. Default: 600): Seconds delay until checking if a new video has been uploaded.
+- **seconds_delay** (Optional. Default: 600): Seconds of delay until checking if a new video has been uploaded. If the value is low you will exceed the API rate limit.
 - **debug_console** (Optional. Default: true): Show debug messages in console or not.
 - **log_to_file** (Optional. Default: true): Write debug messages in log file or not.
 - **log_file** (Optional. Default: "c:\temp\\.sharpcoverttube.log"): Log file path.
@@ -93,12 +93,13 @@ python generate_video.py -t qr_aes -f c:\temp\dirtemp_aes.avi -c "dir c:\windows
 ![img5](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_5.png)
 
 
-
 ---------------------------
 
 ## Running it as a service
 
-It is also possible to run it as a service with the code in the [SharpCovertTube_Service folder](https://github.com/ricardojoserf/SharpCovertTube/tree/main/SharpCovertTube_Service). It possible to install it with InstallUtil, it is prepared to run as SYSTEM so you need to run it as administrator:
+You can find the code to run it as a service in the [SharpCovertTube_Service folder](https://github.com/ricardojoserf/SharpCovertTube/tree/main/SharpCovertTube_Service). It has the same functionalities except self-deletion, which would not make sense in this case.
+
+It possible to install it with InstallUtil, it is prepared to run as the SYSTEM user and you need to install it as administrator:
 
 ```
 InstallUtil.exe SharpCovertTube_Service.exe
@@ -111,6 +112,8 @@ net start "SharpCovertTube Service"
 ```
 
 ![img7](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_7.png)
+
+In case you have administrative privileges this may be stealthier than the ordinary binary, but the "Description" and "DisplayName" should be updated (as you can see in the image above). If you do not have those privileges you can not install services so you can only use the ordinary binary. 
 
 ---------------------------
 
