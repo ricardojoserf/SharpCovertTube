@@ -1,8 +1,13 @@
 # SharpCovertTube
 
-A program to control Windows systems remotely by uploading videos to Youtube, using C# for the listener and Python to create the videos. The QR codes can be in cleartext or AES-encrypted values.
+SharpCovertTube is a program created to control Windows systems remotely by uploading videos to Youtube.
+
+The program monitors a Youtube channel until a video is uploaded, decodes the QR code from the thumbnail of the uploaded video and executes a command. The QR codes in the videos can use cleartext or AES-encrypted values.
+
+It has two versions, binary and service binary, and it includes a Python script to generate the malicious videos. Its purpose is to serve as a persistence method using only web requests to the Google API.
 
 ![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_0.png)
+
 
 ## Usage
 
