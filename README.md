@@ -27,11 +27,15 @@ This works also for QR codes with AES-encrypted payloads and longer command resp
 
 ![img4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_4.png)
 
-Logging to a file is optional but you must check the folder for that file exists in the system, the default value is "c:\temp\\.sharpcoverttube.log". DNS exfiltration is also optional and can be tested using Burp's collaborator:
+Logging to a file is optional but you must check the folder for that file exists in the system, the default value is "c:\temp\\.sharpcoverttube.log". 
+
+DNS exfiltration is also optional and can be easily tested using Burp's collaborator:
 
 ![img8](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_8.png)
 
-As an alternative, I created [this repository](https://github.com/ricardojoserf/dns-exfiltration) with scripts to monitor and parse the base64-encoded DNS queries containing the command responses.
+As an alternative, I created a script to easily create QR videos, upload to Youtube and monitor and parse the base64-encoded DNS queries. The configuration to use this script as C2 server is explained in the [c2-server folder](https://github.com/ricardojoserf/SharpCovertTube/tree/main/c2-server):
+
+![c2_0](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_0.png)
 
 -------------------
 
@@ -104,7 +108,7 @@ python generate_video.py -t qr_aes -f c:\temp\dirtemp_aes.avi -c "dir c:\windows
 
 You can find the code to run it as a service in the [SharpCovertTube_Service folder](https://github.com/ricardojoserf/SharpCovertTube/tree/main/SharpCovertTube_Service). It has the same functionalities except self-deletion, which would not make sense in this case.
 
-It possible to install it with InstallUtil, it is prepared to run as the SYSTEM user and you need to install it as administrator:
+It is possible to install it with InstallUtil, it is prepared to run as the SYSTEM user and you need to install it as administrator:
 
 ```
 InstallUtil.exe SharpCovertTube_Service.exe
