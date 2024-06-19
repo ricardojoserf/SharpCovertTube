@@ -37,11 +37,25 @@ pip install dnslib pillar-youtube-upload Pillow opencv-python pyqrcode pypng pyc
 
 It is necessary to complete the **config.py** file:
 
-- **client_id** and **client_secret**: Go to the [Google's credentials page](https://console.cloud.google.com/apis/credentials), click "Create Credentials" > "OAuth client ID" and select the "Web application" app type, using "http://localhost:8080" as redirect URI. Then open the OAuth client ID to grab the values.
-- **access_token_**
-- **refresh_token_**
-- **ns_subdomain**: The subdomain for DNS exfiltration. In this case we will use the subdomain "steve".
-- **log_file** (default: "log.txt"): File to store the logs.
+- **client_id** and **client_secret**:
+     - Go to the [Google's credentials page](https://console.cloud.google.com/apis/credentials)
+     - Click "Create Credentials" > "OAuth client ID" and select the "Web application" app type
+     - Use "http://localhost:8080" as redirect URI and click "Create"
+     - Open the OAuth client ID to grab the values
+       
+- **access_token_** and **refresh_token_**:
+     - Access the following page (after changing "YOUR_CLIENT_ID" with your client_id value):
+     
+      https://accounts.google.com/o/oauth2/auth?client_id=YOUR_CLIENT_ID&redirect_uri=http://localhost:8080&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload&access_type=offline
+  
+     - Grab the "code" value from the previous request and execute the following CURL request (after changing "YOUR_CODE" with the code value, "YOUR_CLIENT_ID" with your client_id value and "YOUR_CLIENT_SECRET" with your client_secret value):
+ 
+      curl --request POST --data "code=YOUR_CODE&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&redirect_uri=http://localhost:8080&grant_type=authorization_code" https://oauth2.googleapis.com/token
+
+- **ns_subdomain**: The subdomain for DNS exfiltration, in this case we will use the subdomain "steve"
+- **log_file** (default: "log.txt"): File to store the logs
+- **show_banner** (default: False): Show the banner
+
 
 ### B. DNS configuration (DigitalOcean and GoDaddy)
 
