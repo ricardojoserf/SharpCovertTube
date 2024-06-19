@@ -2,26 +2,52 @@
 
 Script to generate a video, upload it to Youtube and receive the DNS responses from the SharpCovertTube client.
 
-Options are the same as generating a video:
+ - "generate": Create a QR video
+ - "upload": Upload a video to Youtube
+ - "listen": Listen for DNS queries
+ - "exit": Exit the program
+
+![c2_0](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_0.png)
+
+Generating a video with a QR image:
+
+![c2_1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_1.png)
+
+Uploading the video:
+
+![c2_2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_2.png)
+
+Listening for DNS queries and decoding the results:
+
+![c2_3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_3.png)
+
+--------------------------
+
+## Installation
 
 ```
-python3 server.py -t TYPE -f FILE -c COMMAND [-k AESKEY] [-i AESIV]
+pip install dnslib pillar-youtube-upload Pillow opencv-python pyqrcode pypng pycryptodome rebus
 ```
 
-- TYPE (-t) must be "qr" for payloads in cleartext or "qr_aes" if using AES encryption.
+--------------------------
 
-- FILE (-f) is the path where the video is generated.
+## Configuration
 
-- COMMAND (-c) is the command to execute in the system.
+### A. Youtube 
 
-- AESKEY (-k) is the key for AES encryption, only necessary if using the type "qr_aes". It must be a string of 16 characters and the same as in Program.cs file in SharpCovertTube.
+It is necessary to complete the **config.py** file:
 
-- AESIV (-i) is the IV for AES encryption, only necessary if using the type "qr_aes". It must be a string of 16 characters and the same as in Program.cs file in SharpCovertTube. 
+- **client_id** and **client_secret**: Go to the [Google's credentials page](https://console.cloud.google.com/apis/credentials), click "Create Credentials" > "OAuth client ID" and select the "Web application" app type, using "http://localhost:8080" as redirect URI. Then open the OAuth client ID to grab the values.
+- **access_token_**
+- **refresh_token_**
+- **ns_subdomain**: The subdomain for DNS exfiltration. In this case we will use the subdomain "steve".
+- **log_file** (default: "log.txt"): File to store the logs.
 
+### B. DNS configuration (DigitalOcean and GoDaddy)
 
-### 1.1 Configuration - DigitalOcean
+If you have not configured the DNS domain and is already pointing to a server you control, you can do it using DigitalOcean and GoDaddy.
 
-Create a project, connect the GoDaddy's domain to it and create a droplet.
+Create a project in DigitalOcean, connect the GoDaddy's domain to it and create a droplet.
 
 ![img2b](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/dns-exfiltration/Screenshot_2b.png)
 
@@ -37,30 +63,10 @@ Then, add the following DNS records:
 
 ![img3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/dns-exfiltration/Screenshot_3.png)
 
-
-### 1.2 Configuration - GoDaddy
-
-After purchasing a domain in GoDaddy, visit the "DNS Management" section ([https://dcc.godaddy.com/manage/YOUR_DOMAIN/dns](https://dcc.godaddy.com/manage/YOUR_DOMAIN/dns)). You have to add an entry in the "Hostname" subsection, which will contain the host "ns" and will point to your DigitalOcean droplet's IP address:
+After purchasing a domain in GoDaddy, visit the "DNS Management" section in GoDaddy ([https://dcc.godaddy.com/manage/YOUR_DOMAIN/dns](https://dcc.godaddy.com/manage/YOUR_DOMAIN/dns)). You have to add an entry in the "Hostname" subsection, which will contain the host "ns" and will point to your DigitalOcean droplet's IP address:
 
 ![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/dns-exfiltration/Screenshot_1.png)
 
 Then, in "Nameservers" subsection, add the DigitalOcean nameservers if they are not already in there (ns1.digitalocean.com, ns2.digitalocean.com and ns3.digitalocean.com):
 
 ![img2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/dns-exfiltration/Screenshot_2.png)
-
-
-### 1.3 Configuration - config.py
-
-- client_id 
-- client_secret 
-- access_token_
-- refresh_token_
-- ns_subdomain
-- log_file (default: "log.txt")
-
-
-### Installation
-
-```
-pip install dnslib pillar-youtube-upload Pillow opencv-python pyqrcode pypng pycryptodome rebus
-```
