@@ -18,9 +18,13 @@ Uploading the video:
 
 ![c2_2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_2.png)
 
-Listening for DNS queries and decoding the results:
+Listening for DNS queries and decoding/decrypting the results:
 
 ![c2_3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_3.png)
+
+Generating video + Uploading video + Listening for DNS queries:
+
+![c2_4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_4.png)
 
 --------------------------
 
