@@ -5,3 +5,5 @@ refresh_token_ = ""
 ns_subdomain = ".steve"
 log_file = "log.txt"
 show_banner = False
+aes_key = ""
+aes_iv  = ""

