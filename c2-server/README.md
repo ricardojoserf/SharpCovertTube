@@ -5,6 +5,7 @@ Script to generate a video, upload it to Youtube and receive the DNS responses f
  - "generate": Create a QR video
  - "upload": Upload a video to Youtube
  - "listen": Listen for DNS queries
+ - "all": Create a QR video + Upload a video to Youtube + Listen for DNS queries
  - "exit": Exit the program
 
 ![c2_0](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/c2_0.png)
