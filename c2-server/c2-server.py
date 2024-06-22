@@ -203,11 +203,13 @@ def upload_video(video_name):
 
 
 def showHelp():
-	print("Options: \n - \"generate\": \tCreate a QR video \n - \"upload\": \tUpload a video to Youtube \n - \"listen\": \tListen for DNS queries \n - \"exit\": \tExit the program \n")
+	print("Options: \n - \"generate\": \tCreate a QR video \n - \"upload\": \tUpload a video to Youtube \n - \"listen\": \tListen for DNS queries \n - \"all\": \tCreate a QR video + Upload a video to Youtube + Listen for DNS queries\n - \"exit\": \tExit the program \n")
 
 
 def main_loop():
 	while True:
+		ns_subdomain = config.ns_subdomain
+		log_file = config.log_file
 		option = input("> ")
 		if option == "generate":
 			command_ = input("[+] Command: ")
@@ -232,8 +234,27 @@ def main_loop():
 			file_ = input("[+] Video file name: ")
 			upload_video(file_)
 		elif option == "listen":
-			ns_subdomain = config.ns_subdomain
-			log_file = config.log_file
+			listener(ns_subdomain, log_file)
+		elif option == "all":
+			command_ = input("[+] Command: ")
+			type_ = input("[+] Type (\"qr\" or \"qr_aes\"): ")
+			if (type_ != "qr" and type_ != "qr_aes"):
+				print("[-] Type value must be \"qr\" or \"qr_aes\"\n")
+				main_loop()
+			aeskey = ""
+			aesiv  = ""
+			if type_ == "qr_aes":
+				aeskey = input("[+] AES key (example: \"0000000000000000\"): ")
+				if(len(aeskey) % 16 != 0):
+	                                print("[-] AES key length must be multiple of 16.")
+	                                main_loop()
+				aesiv = input("[+] AES IV (example: \"0000000000000000\"): ")
+				if(len(aesiv) % 16 != 0):
+	                                print("[-] IV length must be multiple of 16.")
+	                                main_loop()
+			file_ = "test.avi"
+			generate_video(type_, file_, aeskey, aesiv, command_)
+			upload_video(file_)
 			listener(ns_subdomain, log_file)
 		elif option == "exit":
 			sys.exit(0)
