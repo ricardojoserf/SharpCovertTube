@@ -31,7 +31,14 @@ Generating video + Uploading video + Listening for DNS queries:
 ## Installation
 
 ```
+apt-get install libgl1
 pip install dnslib pillar-youtube-upload Pillow opencv-python pyqrcode pypng pycryptodome rebus
+```
+
+If port 53 is in use you may need to stop the systemd-resolved service:
+
+```
+sudo systemctl stop systemd-resolved
 ```
 
 --------------------------
