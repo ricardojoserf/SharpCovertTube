@@ -27,7 +27,7 @@ This works also for QR codes with AES-encrypted payloads and longer command resp
 
 ![img4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/sharpcoverttube/Screenshot_4.png)
 
-Logging to a file is optional but you must check the folder for that file exists in the system, the default value is "c:\temp\\.sharpcoverttube.log". 
+Logging to a file is optional but check the folder exists, the default value is "c:\temp\\.sharpcoverttube.log" so "c:\temp" should exist. 
 
 DNS exfiltration is also optional and can be easily tested using Burp's collaborator:
 
@@ -41,7 +41,7 @@ As an alternative, I created a script to easily create QR videos, upload to Yout
 
 ## Configuration
 
-There are some values you can change, you can find them in Configuration.cs file for the [regular binary](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube/Configuration.cs) and [the service binary](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube_Service/Configuration.cs). Only the first two have to be updated:
+There are some values you can change, you can find them in Configuration.cs file for the [regular binary](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube/Configuration.cs) and [the service binary](https://github.com/ricardojoserf/SharpCovertTube/blob/main/SharpCovertTube_Service/Configuration.cs). Only the first two values have to be updated:
 
 - **channel_id** (Mandatory!!!): Get your Youtube channel ID from [here](https://www.youtube.com/account_advanced).
 - **api_key** (Mandatory!!!): To get the API key create an application and generate the key from [here](https://console.cloud.google.com/apis/credentials).
@@ -61,10 +61,16 @@ There are some values you can change, you can find them in Configuration.cs file
 
 ## Generating videos with QR codes
 
-You can generate the videos from Windows using Python3. For that, first install the dependencies:
+You can generate the videos using the server script in the [c2-server folder](https://github.com/ricardojoserf/SharpCovertTube/tree/main/c2-server) or simply running the *generate_video.py* script. For the latter, first install the dependencies:
 
 ```
 pip install Pillow opencv-python pyqrcode pypng pycryptodome rebus
+```
+
+In case you are using Linux you may also need:
+
+```
+apt-get install libgl1
 ```
 
 Then run the generate_video.py script:
@@ -131,3 +137,5 @@ In case you have administrative privileges this may be stealthier than the ordin
 - **File must be 64 bits!!!** This is due to the code used for QR decoding, which is borrowed from Stefan Gansevles's [QR-Capture](https://github.com/Stefangansevles/QR-Capture) project, who borrowed part of it from Uzi Granot's [QRCode](https://github.com/Uzi-Granot/QRCode) project, who at the same time borrowed part of it from Zakhar Semenov's [Camera_Net](https://github.com/free5lot/Camera_Net) project (then I lost track). So thanks to all of them!
 
 - This project is a port from [covert-tube](https://github.com/ricardojoserf/covert-tube), a project I developed in 2021 using just Python, which was inspired by Welivesecurity blogs about [Casbaneiro](https://www.welivesecurity.com/2019/10/03/casbaneiro-trojan-dangerous-cooking/) and [Numando](https://www.welivesecurity.com/2021/09/17/numando-latam-banking-trojan/) malwares.
+
+- This project is a PoC to show how almost anything on the Internet can be used as C2 channel, hopefully it is inspirational for someone. The project is intended for educational purposes, if you misuse the Youtube service you can get in problems such as Youtube deleting your channe.
