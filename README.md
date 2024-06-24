@@ -138,4 +138,4 @@ In case you have administrative privileges this may be stealthier than the ordin
 
 - This project is a port from [covert-tube](https://github.com/ricardojoserf/covert-tube), a project I developed in 2021 using just Python, which was inspired by Welivesecurity blogs about [Casbaneiro](https://www.welivesecurity.com/2019/10/03/casbaneiro-trojan-dangerous-cooking/) and [Numando](https://www.welivesecurity.com/2021/09/17/numando-latam-banking-trojan/) malwares.
 
-- This project is a PoC to show how almost anything on the Internet can be used as C2 channel, hopefully it is inspirational for someone. The project is intended for educational purposes, if you misuse the Youtube service you can get in problems such as Youtube deleting your channe.
+- This project is a PoC to show how almost anything on the Internet can be used as C2 channel, hopefully it is inspirational for someone. The project is intended for educational purposes, if you misuse the Youtube service you can get in problems such as Youtube deleting your channel.
